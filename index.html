@@ -48,6 +48,18 @@
       margin-top: 10px;
       font-weight: bold;
     }
+    .btn {
+      margin-top: 10px;
+      padding: 5px 10px;
+      background: #2196f3;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .btn:hover {
+      background: #1976d2;
+    }
     #granTotal {
       background: #222;
       color: #fff;
@@ -58,11 +70,21 @@
       position: sticky;
       bottom: 0;
     }
+    #globalButtons {
+      margin: 20px 0;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
   <h1>Simulación de Bodega con 15 Racks</h1>
   <div id="contenedor"></div>
+
+  <div id="globalButtons">
+    <button class="btn" onclick="seleccionarTodos(true)">Seleccionar TODOS</button>
+    <button class="btn" onclick="seleccionarTodos(false)">Deseleccionar TODOS</button>
+  </div>
+
   <div id="granTotal">Seleccionadas: 0 | No seleccionadas: 0</div>
 
   <script>
@@ -77,6 +99,22 @@
       const rack = document.createElement("div");
       rack.className = "rack";
       rack.innerHTML = `<h2>Rack ${r}</h2>`;
+
+      // Botones para el rack
+      const btnSel = document.createElement("button");
+      btnSel.className = "btn";
+      btnSel.innerText = "Seleccionar Rack";
+      btnSel.onclick = () => seleccionarRack(r, true);
+
+      const btnDes = document.createElement("button");
+      btnDes.className = "btn";
+      btnDes.style.marginLeft = "5px";
+      btnDes.innerText = "Deseleccionar Rack";
+      btnDes.onclick = () => seleccionarRack(r, false);
+
+      rack.appendChild(btnSel);
+      rack.appendChild(btnDes);
+
       const totales = document.createElement("div");
       totales.className = "totales";
       totales.id = `totales-${r}`;
@@ -87,12 +125,10 @@
         const fila = document.createElement("div");
         fila.className = "fila";
 
-        // Crear columnas (A–W)
         letras.forEach(letra => {
           const ubicacion = document.createElement("div");
           ubicacion.className = "ubicacion";
 
-          // 3 sububicaciones por cada posición
           for (let i = 1; i <= 3; i++) {
             const sub = document.createElement("div");
             sub.className = "sub";
@@ -121,6 +157,30 @@
       actualizarTotales(r);
     }
 
+    // Seleccionar o deseleccionar un rack completo
+    function seleccionarRack(rackNum, seleccionar) {
+      const subs = document.querySelectorAll(`.sub[data-rack="${rackNum}"]`);
+      subs.forEach(s => {
+        if (seleccionar) {
+          s.classList.add("seleccionada");
+          s.dataset.seleccionada = "true";
+        } else {
+          s.classList.remove("seleccionada");
+          s.dataset.seleccionada = "false";
+        }
+      });
+      actualizarTotales(rackNum);
+      actualizarGranTotal(); // ✅ ahora actualiza el gran total inmediatamente
+    }
+
+    // Seleccionar/deseleccionar todos los racks
+    function seleccionarTodos(seleccionar) {
+      for (let r = 1; r <= totalRacks; r++) {
+        seleccionarRack(r, seleccionar);
+      }
+      actualizarGranTotal();
+    }
+
     // Totales por rack y gran total
     function actualizarTotales(rackNum) {
       const subs = document.querySelectorAll(`.sub[data-rack="${rackNum}"]`);
@@ -131,11 +191,8 @@
       const noSeleccionadas = subs.length - seleccionadas;
       document.getElementById(`totales-${rackNum}`).innerText =
         `Seleccionadas: ${seleccionadas} | No seleccionadas: ${noSeleccionadas}`;
-
-      actualizarGranTotal();
     }
 
-    // Gran total general
     function actualizarGranTotal() {
       const subs = document.querySelectorAll(".sub");
       let seleccionadas = 0;
