@@ -2,22 +2,23 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Racks Interactivos</title>
+<title>Racks Interactivos con Excel</title>
+<script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 <style>
-  body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
-  h2 { margin-top: 30px; }
-  .rack { margin-bottom: 30px; padding: 10px; background: #fff; border: 2px solid #ccc; border-radius: 10px; }
-  .fila { display: flex; flex-wrap: nowrap; margin-bottom: 5px; align-items: center; }
-  .ubicacion { display: flex; margin-right: 3px; }
-  .sub { width: 30px; height: 30px; margin: 1px; background: #ddd; border-radius: 5px;
-        text-align: center; line-height: 30px; font-size: 10px; cursor: pointer; user-select: none; }
-  .sub.seleccionada { background: #4caf50; color: white; } /* Verde */
-  .sub.piso { background: orange; color: white; }           /* Naranja */
-  .totales { margin-top: 10px; font-weight: bold; }
-  .btn { margin: 5px 3px; padding: 5px 10px; background: #2196f3; color: #fff; border: none; border-radius: 5px; cursor: pointer; }
-  .btn:hover { background: #1976d2; }
-  #granTotal { background: #222; color: #fff; padding: 15px; border-radius: 10px; font-size: 18px; text-align: center; position: sticky; bottom: 0; }
-  #globalButtons { margin: 20px 0; text-align: center; }
+body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+h2 { margin-top: 30px; }
+.rack { margin-bottom: 30px; padding: 10px; background: #fff; border: 2px solid #ccc; border-radius: 10px; }
+.fila { display: flex; flex-wrap: nowrap; margin-bottom: 5px; align-items: center; }
+.ubicacion { display: flex; margin-right: 3px; }
+.sub { width: 30px; height: 30px; margin: 1px; background: #ddd; border-radius: 5px;
+      text-align: center; line-height: 30px; font-size: 10px; cursor: pointer; user-select: none; }
+.sub.seleccionada { background: #4caf50; color: white; }
+.sub.piso { background: orange; color: white; }
+.totales { margin-top: 10px; font-weight: bold; }
+.btn { margin: 5px 3px; padding: 5px 10px; background: #2196f3; color: #fff; border: none; border-radius: 5px; cursor: pointer; }
+.btn:hover { background: #1976d2; }
+#granTotal { background: #222; color: #fff; padding: 15px; border-radius: 10px; font-size: 18px; text-align: center; position: sticky; bottom: 0; }
+#globalButtons { margin: 20px 0; text-align: center; }
 </style>
 </head>
 <body>
@@ -27,28 +28,30 @@
 <div id="globalButtons">
   <button class="btn" onclick="seleccionarTodos(true)">Seleccionar TODOS</button>
   <button class="btn" onclick="seleccionarTodos(false)">Deseleccionar TODOS</button>
-  <button class="btn" onclick="descargarCSV()">⬇ Descargar Seleccionados</button>
+  <button class="btn" onclick="descargarExcel()">⬇ Descargar Excel</button>
 </div>
 
 <div id="granTotal">TOTAL → Verde: 0 | Naranja: 0 | Combinadas: 0 | No seleccionadas: 0</div>
 
 <script>
-const letras = "ABCDEFGHIJKLMNOPQRSTUVW".split(""); 
+const letras = "ABCDEFGHIJKLMNOPQRSTUVW".split("");
 const niveles = [1,2,3,4,5,6];
 const totalRacks = 15;
 const contenedor = document.getElementById("contenedor");
 
+// Crear racks interactivos
 for(let r=1; r<=totalRacks; r++){
   const rack = document.createElement("div"); rack.className="rack";
   rack.innerHTML=`<h2>Rack ${r}</h2>`;
 
+  // Botones rack
   const btnSel = document.createElement("button"); btnSel.className="btn"; btnSel.innerText="Seleccionar Rack";
   btnSel.onclick = () => seleccionarRack(r,true);
   const btnDes = document.createElement("button"); btnDes.className="btn"; btnDes.innerText="Deseleccionar Rack";
   btnDes.onclick = () => seleccionarRack(r,false);
-
   rack.appendChild(btnSel); rack.appendChild(btnDes);
 
+  // Crear filas y sububicaciones
   niveles.forEach(nivel=>{
     const fila = document.createElement("div"); fila.className="fila";
 
@@ -83,14 +86,12 @@ for(let r=1; r<=totalRacks; r++){
   });
 
   const totales = document.createElement("div"); totales.className="totales"; totales.id=`totales-${r}`;
-  totales.innerText="Verde: 0 | Naranja: 0 | Combinadas: 0 | No seleccionadas: 0";
   rack.appendChild(totales);
-
   contenedor.appendChild(rack);
   actualizarTotales(r);
 }
 
-// Funciones
+// Funciones de selección
 function seleccionarRack(rackNum,seleccionar){
   const subs=document.querySelectorAll(`.sub[data-rack="${rackNum}"]`);
   subs.forEach(s=>{
@@ -99,7 +100,6 @@ function seleccionarRack(rackNum,seleccionar){
   });
   actualizarTotales(rackNum); actualizarGranTotal();
 }
-
 function seleccionarFila(rackNum,nivel,seleccionar){
   const subs=document.querySelectorAll(`.sub[data-rack="${rackNum}"][data-nivel="${nivel}"]`);
   subs.forEach(s=>{
@@ -108,7 +108,6 @@ function seleccionarFila(rackNum,nivel,seleccionar){
   });
   actualizarTotales(rackNum); actualizarGranTotal();
 }
-
 function togglePiso(rackNum,nivel){
   const subs=document.querySelectorAll(`.sub[data-rack="${rackNum}"][data-nivel="${nivel}"]`);
   subs.forEach(s=>{
@@ -117,12 +116,12 @@ function togglePiso(rackNum,nivel){
   });
   actualizarTotales(rackNum); actualizarGranTotal();
 }
-
 function seleccionarTodos(seleccionar){
   for(let r=1;r<=totalRacks;r++) seleccionarRack(r,seleccionar);
   actualizarGranTotal();
 }
 
+// Actualización de totales
 function actualizarTotales(rackNum){
   const subs=document.querySelectorAll(`.sub[data-rack="${rackNum}"]`);
   let verde=0, naranja=0;
@@ -132,7 +131,6 @@ function actualizarTotales(rackNum){
   document.getElementById(`totales-${rackNum}`).innerText=
     `Rack ${rackNum} → Verde: ${verde} | Naranja: ${naranja} | Combinadas: ${combinadas} | No seleccionadas: ${noSel}`;
 }
-
 function actualizarGranTotal(){
   const subs=document.querySelectorAll(".sub");
   let verde=0, naranja=0;
@@ -143,12 +141,52 @@ function actualizarGranTotal(){
     `TOTAL → Verde: ${verde} | Naranja: ${naranja} | Combinadas: ${combinadas} | No seleccionadas: ${noSel}`;
 }
 
-function descargarCSV(){
-  const subs=document.querySelectorAll(".sub");
-  let datos="Rack,Nivel,Ubicacion,Estado\n";
-  subs.forEach(s=>{ if(s.dataset.estado!=="ninguno") datos+=`${s.dataset.rack},${s.dataset.nivel},${s.innerText},${s.dataset.estado}\n`; });
-  const blob=new Blob([datos],{type:"text/csv"});
-  const link=document.createElement("a"); link.href=URL.createObjectURL(blob); link.download="ubicaciones_seleccionadas.csv"; link.click();
+// Descarga Excel con colores
+function descargarExcel(){
+  const wb = XLSX.utils.book_new();
+  const ws_data = [];
+  
+  for(let r=1; r<=totalRacks; r++){
+    ws_data.push([`Rack ${r}`]);
+    ws_data.push(letras.map(l=>`${l}1`).flat());
+
+    niveles.forEach(nivel=>{
+      const row=[];
+      letras.forEach(letra=>{
+        const subs = Array.from(document.querySelectorAll(`.sub[data-rack="${r}"][data-nivel="${nivel}"]`))
+                          .filter(s=>s.innerText.startsWith(letra));
+        subs.forEach(s=>{
+          if(s.dataset.estado==="verde") row.push("V");
+          else if(s.dataset.estado==="piso") row.push("P");
+          else row.push("");
+        });
+      });
+      ws_data.push(row);
+    });
+
+    // Totales rack
+    const subsRack=document.querySelectorAll(`.sub[data-rack="${r}"]`);
+    let verde=0, naranja=0;
+    subsRack.forEach(s=>{ if(s.dataset.estado==="verde") verde++; if(s.dataset.estado==="piso") naranja++; });
+    ws_data.push([`Totales Rack ${r}: Verde=${verde} Naranja=${naranja} Combinadas=${verde+naranja}`]);
+    ws_data.push([]);
+  }
+
+  const ws = XLSX.utils.aoa_to_sheet(ws_data);
+
+  // Colorear celdas
+  ws_data.forEach((fila,rIndex)=>{
+    fila.forEach((val,cIndex)=>{
+      const cell_ref = XLSX.utils.encode_cell({c:cIndex,r:rIndex});
+      const cell = ws[cell_ref];
+      if(!cell) return;
+      if(val==="V") cell.s={fill:{fgColor:{rgb:"00FF00"}}};
+      if(val==="P") cell.s={fill:{fgColor:{rgb:"FFA500"}}};
+    });
+  });
+
+  XLSX.utils.book_append_sheet(wb, ws, "Bodega Completa");
+  XLSX.writeFile(wb,"Bodega_Racks.xlsx");
 }
 </script>
 </body>
