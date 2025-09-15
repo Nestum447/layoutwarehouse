@@ -4,94 +4,52 @@
   <meta charset="UTF-8">
   <title>Racks Interactivos</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
-      background: #f5f5f5;
-    }
-    h2 {
-      margin-top: 30px;
-    }
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+    h2 { margin-top: 30px; }
     .rack {
-      margin-bottom: 30px;
-      padding: 10px;
-      background: #fff;
-      border: 2px solid #ccc;
-      border-radius: 10px;
+      margin-bottom: 30px; padding: 10px; background: #fff;
+      border: 2px solid #ccc; border-radius: 10px;
     }
-    .fila {
-      display: flex;
-      flex-wrap: nowrap;
-      margin-bottom: 5px;
-    }
-    .ubicacion {
-      display: flex;
-      margin-right: 3px;
-    }
+    .fila { display: flex; flex-wrap: nowrap; margin-bottom: 5px; align-items: center; }
+    .ubicacion { display: flex; margin-right: 3px; }
     .sub {
-      width: 30px;
-      height: 30px;
-      margin: 1px;
-      background: #ddd;
-      border-radius: 5px;
-      text-align: center;
-      line-height: 30px;
-      font-size: 10px;
-      cursor: pointer;
-      user-select: none;
+      width: 30px; height: 30px; margin: 1px;
+      background: #ddd; border-radius: 5px;
+      text-align: center; line-height: 30px;
+      font-size: 10px; cursor: pointer; user-select: none;
     }
-    .sub.seleccionada {
-      background: #4caf50;
-      color: white;
-    }
-    .totales {
-      margin-top: 10px;
-      font-weight: bold;
-    }
+    .sub.seleccionada { background: #4caf50; color: white; }
+    .totales { margin-top: 10px; font-weight: bold; }
     .btn {
-      margin-top: 10px;
-      padding: 5px 10px;
-      background: #2196f3;
-      color: #fff;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
+      margin: 5px 3px; padding: 5px 10px;
+      background: #2196f3; color: #fff;
+      border: none; border-radius: 5px; cursor: pointer;
     }
-    .btn:hover {
-      background: #1976d2;
-    }
+    .btn:hover { background: #1976d2; }
     #granTotal {
-      background: #222;
-      color: #fff;
-      padding: 15px;
-      border-radius: 10px;
-      font-size: 18px;
-      text-align: center;
-      position: sticky;
-      bottom: 0;
+      background: #222; color: #fff; padding: 15px;
+      border-radius: 10px; font-size: 18px;
+      text-align: center; position: sticky; bottom: 0;
     }
-    #globalButtons {
-      margin: 20px 0;
-      text-align: center;
-    }
+    #globalButtons { margin: 20px 0; text-align: center; }
   </style>
 </head>
 <body>
-  <h1>Simulación de Bodega con 15 Racks</h1>
+  <h1>📦 Simulación de Bodega con 15 Racks</h1>
   <div id="contenedor"></div>
 
   <div id="globalButtons">
     <button class="btn" onclick="seleccionarTodos(true)">Seleccionar TODOS</button>
     <button class="btn" onclick="seleccionarTodos(false)">Deseleccionar TODOS</button>
+    <button class="btn" onclick="descargarCSV()">⬇ Descargar Seleccionados</button>
   </div>
 
   <div id="granTotal">Seleccionadas: 0 | No seleccionadas: 0</div>
 
   <script>
-    const letras = "ABCDEFGHIJKLMNOPQRSTUVW".split("");
+    const letras = "ABCDEFGHIJKLMNOPQRSTUVW".split(""); // A-W
     const niveles = [1, 2, 3, 4, 5, 6];
     const totalRacks = 15;
-
     const contenedor = document.getElementById("contenedor");
 
     // Crear 15 racks
@@ -108,23 +66,32 @@
 
       const btnDes = document.createElement("button");
       btnDes.className = "btn";
-      btnDes.style.marginLeft = "5px";
       btnDes.innerText = "Deseleccionar Rack";
       btnDes.onclick = () => seleccionarRack(r, false);
 
       rack.appendChild(btnSel);
       rack.appendChild(btnDes);
 
-      const totales = document.createElement("div");
-      totales.className = "totales";
-      totales.id = `totales-${r}`;
-      totales.innerText = "Seleccionadas: 0 | No seleccionadas: 0";
-
       // Crear filas (niveles)
       niveles.forEach(nivel => {
         const fila = document.createElement("div");
         fila.className = "fila";
 
+        // Botones de control de fila
+        const filaBtnSel = document.createElement("button");
+        filaBtnSel.className = "btn";
+        filaBtnSel.innerText = `Fila ${nivel} ✔`;
+        filaBtnSel.onclick = () => seleccionarFila(r, nivel, true);
+
+        const filaBtnDes = document.createElement("button");
+        filaBtnDes.className = "btn";
+        filaBtnDes.innerText = `Fila ${nivel} ✘`;
+        filaBtnDes.onclick = () => seleccionarFila(r, nivel, false);
+
+        fila.appendChild(filaBtnSel);
+        fila.appendChild(filaBtnDes);
+
+        // Ubicaciones
         letras.forEach(letra => {
           const ubicacion = document.createElement("div");
           ubicacion.className = "ubicacion";
@@ -134,12 +101,14 @@
             sub.className = "sub";
             sub.innerText = `${letra}${nivel}`;
             sub.dataset.rack = r;
+            sub.dataset.nivel = nivel;
             sub.dataset.seleccionada = "false";
 
             sub.addEventListener("click", () => {
               sub.classList.toggle("seleccionada");
               sub.dataset.seleccionada = sub.classList.contains("seleccionada");
               actualizarTotales(r);
+              actualizarGranTotal();
             });
 
             ubicacion.appendChild(sub);
@@ -151,13 +120,17 @@
         rack.appendChild(fila);
       });
 
+      const totales = document.createElement("div");
+      totales.className = "totales";
+      totales.id = `totales-${r}`;
+      totales.innerText = "Seleccionadas: 0 | No seleccionadas: 0";
       rack.appendChild(totales);
-      contenedor.appendChild(rack);
 
+      contenedor.appendChild(rack);
       actualizarTotales(r);
     }
 
-    // Seleccionar o deseleccionar un rack completo
+    // Seleccionar/Deseleccionar un rack completo
     function seleccionarRack(rackNum, seleccionar) {
       const subs = document.querySelectorAll(`.sub[data-rack="${rackNum}"]`);
       subs.forEach(s => {
@@ -170,10 +143,26 @@
         }
       });
       actualizarTotales(rackNum);
-      actualizarGranTotal(); // ✅ ahora actualiza el gran total inmediatamente
+      actualizarGranTotal();
     }
 
-    // Seleccionar/deseleccionar todos los racks
+    // Seleccionar/Deseleccionar fila
+    function seleccionarFila(rackNum, nivel, seleccionar) {
+      const subs = document.querySelectorAll(`.sub[data-rack="${rackNum}"][data-nivel="${nivel}"]`);
+      subs.forEach(s => {
+        if (seleccionar) {
+          s.classList.add("seleccionada");
+          s.dataset.seleccionada = "true";
+        } else {
+          s.classList.remove("seleccionada");
+          s.dataset.seleccionada = "false";
+        }
+      });
+      actualizarTotales(rackNum);
+      actualizarGranTotal();
+    }
+
+    // Seleccionar/Deseleccionar todos
     function seleccionarTodos(seleccionar) {
       for (let r = 1; r <= totalRacks; r++) {
         seleccionarRack(r, seleccionar);
@@ -185,23 +174,34 @@
     function actualizarTotales(rackNum) {
       const subs = document.querySelectorAll(`.sub[data-rack="${rackNum}"]`);
       let seleccionadas = 0;
-      subs.forEach(s => {
-        if (s.dataset.seleccionada === "true") seleccionadas++;
-      });
+      subs.forEach(s => { if (s.dataset.seleccionada === "true") seleccionadas++; });
       const noSeleccionadas = subs.length - seleccionadas;
       document.getElementById(`totales-${rackNum}`).innerText =
-        `Seleccionadas: ${seleccionadas} | No seleccionadas: ${noSeleccionadas}`;
+        `Rack ${rackNum} → Seleccionadas: ${seleccionadas} | No seleccionadas: ${noSeleccionadas}`;
     }
 
     function actualizarGranTotal() {
       const subs = document.querySelectorAll(".sub");
       let seleccionadas = 0;
-      subs.forEach(s => {
-        if (s.dataset.seleccionada === "true") seleccionadas++;
-      });
+      subs.forEach(s => { if (s.dataset.seleccionada === "true") seleccionadas++; });
       const noSeleccionadas = subs.length - seleccionadas;
       document.getElementById("granTotal").innerText =
         `TOTAL → Seleccionadas: ${seleccionadas} | No seleccionadas: ${noSeleccionadas}`;
+    }
+
+    // Descargar CSV
+    function descargarCSV() {
+      const subs = document.querySelectorAll(".sub.seleccionada");
+      let datos = "Rack,Nivel,Ubicacion\n";
+      subs.forEach(s => {
+        datos += `${s.dataset.rack},${s.dataset.nivel},${s.innerText}\n`;
+      });
+
+      const blob = new Blob([datos], { type: "text/csv" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "ubicaciones_seleccionadas.csv";
+      link.click();
     }
   </script>
 </body>
