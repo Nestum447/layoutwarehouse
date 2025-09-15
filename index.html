@@ -1,32 +1,24 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Racks Interactivos</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
-    h2 { margin-top: 30px; }
-    .rack { margin-bottom: 30px; padding: 10px; background: #fff; border: 2px solid #ccc; border-radius: 10px; }
-    .fila { display: flex; flex-wrap: nowrap; margin-bottom: 5px; align-items: center; }
-    .ubicacion { display: flex; margin-right: 3px; }
-    .sub {
-      width: 30px; height: 30px; margin: 1px;
-      background: #ddd; border-radius: 5px;
-      text-align: center; line-height: 30px;
-      font-size: 10px; cursor: pointer; user-select: none;
-    }
-    .sub.seleccionada { background: #4caf50; color: white; } /* Verde */
-    .sub.piso { background: orange; color: white; }          /* Naranja */
-    .totales { margin-top: 10px; font-weight: bold; }
-    .btn { margin: 5px 3px; padding: 5px 10px; background: #2196f3; color: #fff; border: none; border-radius: 5px; cursor: pointer; }
-    .btn:hover { background: #1976d2; }
-    #granTotal {
-      background: #222; color: #fff; padding: 15px;
-      border-radius: 10px; font-size: 18px;
-      text-align: center; position: sticky; bottom: 0;
-    }
-    #globalButtons { margin: 20px 0; text-align: center; }
-  </style>
+<meta charset="UTF-8">
+<title>Racks Interactivos</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+  h2 { margin-top: 30px; }
+  .rack { margin-bottom: 30px; padding: 10px; background: #fff; border: 2px solid #ccc; border-radius: 10px; }
+  .fila { display: flex; flex-wrap: nowrap; margin-bottom: 5px; align-items: center; }
+  .ubicacion { display: flex; margin-right: 3px; }
+  .sub { width: 30px; height: 30px; margin: 1px; background: #ddd; border-radius: 5px;
+        text-align: center; line-height: 30px; font-size: 10px; cursor: pointer; user-select: none; }
+  .sub.seleccionada { background: #4caf50; color: white; } /* Verde */
+  .sub.piso { background: orange; color: white; }           /* Naranja */
+  .totales { margin-top: 10px; font-weight: bold; }
+  .btn { margin: 5px 3px; padding: 5px 10px; background: #2196f3; color: #fff; border: none; border-radius: 5px; cursor: pointer; }
+  .btn:hover { background: #1976d2; }
+  #granTotal { background: #222; color: #fff; padding: 15px; border-radius: 10px; font-size: 18px; text-align: center; position: sticky; bottom: 0; }
+  #globalButtons { margin: 20px 0; text-align: center; }
+</style>
 </head>
 <body>
 <h1>📦 Simulación de Bodega con 15 Racks</h1>
@@ -38,66 +30,47 @@
   <button class="btn" onclick="descargarCSV()">⬇ Descargar Seleccionados</button>
 </div>
 
-<div id="granTotal">TOTAL → Verde: 0 | Naranja: 0 | No seleccionadas: 0</div>
+<div id="granTotal">TOTAL → Verde: 0 | Naranja: 0 | Combinadas: 0 | No seleccionadas: 0</div>
 
 <script>
-const letras = "ABCDEFGHIJKLMNOPQRSTUVW".split(""); // A-W
-const niveles = [1, 2, 3, 4, 5, 6];
+const letras = "ABCDEFGHIJKLMNOPQRSTUVW".split(""); 
+const niveles = [1,2,3,4,5,6];
 const totalRacks = 15;
 const contenedor = document.getElementById("contenedor");
 
-for (let r = 1; r <= totalRacks; r++) {
-  const rack = document.createElement("div");
-  rack.className = "rack";
-  rack.innerHTML = `<h2>Rack ${r}</h2>`;
+for(let r=1; r<=totalRacks; r++){
+  const rack = document.createElement("div"); rack.className="rack";
+  rack.innerHTML=`<h2>Rack ${r}</h2>`;
 
-  // Botones rack
-  const btnSel = document.createElement("button");
-  btnSel.className = "btn"; btnSel.innerText = "Seleccionar Rack";
-  btnSel.onclick = () => seleccionarRack(r, true);
+  const btnSel = document.createElement("button"); btnSel.className="btn"; btnSel.innerText="Seleccionar Rack";
+  btnSel.onclick = () => seleccionarRack(r,true);
+  const btnDes = document.createElement("button"); btnDes.className="btn"; btnDes.innerText="Deseleccionar Rack";
+  btnDes.onclick = () => seleccionarRack(r,false);
 
-  const btnDes = document.createElement("button");
-  btnDes.className = "btn"; btnDes.innerText = "Deseleccionar Rack";
-  btnDes.onclick = () => seleccionarRack(r, false);
+  rack.appendChild(btnSel); rack.appendChild(btnDes);
 
-  rack.appendChild(btnSel);
-  rack.appendChild(btnDes);
+  niveles.forEach(nivel=>{
+    const fila = document.createElement("div"); fila.className="fila";
 
-  // Filas
-  niveles.forEach(nivel => {
-    const fila = document.createElement("div");
-    fila.className = "fila";
+    const filaBtnSel = document.createElement("button"); filaBtnSel.className="btn"; filaBtnSel.innerText=`Fila ${nivel} ✔`;
+    filaBtnSel.onclick = () => seleccionarFila(r,nivel,true);
+    const filaBtnDes = document.createElement("button"); filaBtnDes.className="btn"; filaBtnDes.innerText=`Fila ${nivel} ✘`;
+    filaBtnDes.onclick = () => seleccionarFila(r,nivel,false);
+    const filaBtnPiso = document.createElement("button"); filaBtnPiso.className="btn"; filaBtnPiso.innerText=`Ubicación Piso ${nivel}`;
+    filaBtnPiso.onclick = () => togglePiso(r,nivel);
 
-    // Botones fila
-    const filaBtnSel = document.createElement("button");
-    filaBtnSel.className = "btn"; filaBtnSel.innerText = `Fila ${nivel} ✔`;
-    filaBtnSel.onclick = () => seleccionarFila(r, nivel, true);
+    fila.appendChild(filaBtnSel); fila.appendChild(filaBtnDes); fila.appendChild(filaBtnPiso);
 
-    const filaBtnDes = document.createElement("button");
-    filaBtnDes.className = "btn"; filaBtnDes.innerText = `Fila ${nivel} ✘`;
-    filaBtnDes.onclick = () => seleccionarFila(r, nivel, false);
-
-    const filaBtnPiso = document.createElement("button");
-    filaBtnPiso.className = "btn"; filaBtnPiso.innerText = `Ubicación Piso ${nivel}`;
-    filaBtnPiso.onclick = () => togglePiso(r, nivel);
-
-    fila.appendChild(filaBtnSel);
-    fila.appendChild(filaBtnDes);
-    fila.appendChild(filaBtnPiso);
-
-    // Sububicaciones
-    letras.forEach(letra => {
-      const ubicacion = document.createElement("div"); ubicacion.className = "ubicacion";
-      for (let i = 1; i <= 3; i++) {
-        const sub = document.createElement("div");
-        sub.className = "sub"; sub.innerText = `${letra}${nivel}`;
-        sub.dataset.rack = r; sub.dataset.nivel = nivel; sub.dataset.estado = "ninguno";
-
-        sub.addEventListener("click", () => {
-          if (sub.classList.contains("seleccionada")) {
-            sub.classList.remove("seleccionada"); sub.dataset.estado = "ninguno";
-          } else {
-            sub.classList.add("seleccionada"); sub.classList.remove("piso"); sub.dataset.estado = "verde";
+    letras.forEach(letra=>{
+      const ubicacion = document.createElement("div"); ubicacion.className="ubicacion";
+      for(let i=1;i<=3;i++){
+        const sub = document.createElement("div"); sub.className="sub"; sub.innerText=`${letra}${nivel}`;
+        sub.dataset.rack=r; sub.dataset.nivel=nivel; sub.dataset.estado="ninguno";
+        sub.addEventListener("click",()=>{
+          if(sub.classList.contains("seleccionada")){
+            sub.classList.remove("seleccionada"); sub.dataset.estado="ninguno";
+          }else{
+            sub.classList.add("seleccionada"); sub.classList.remove("piso"); sub.dataset.estado="verde";
           }
           actualizarTotales(r); actualizarGranTotal();
         });
@@ -109,9 +82,8 @@ for (let r = 1; r <= totalRacks; r++) {
     rack.appendChild(fila);
   });
 
-  const totales = document.createElement("div");
-  totales.className = "totales"; totales.id = `totales-${r}`;
-  totales.innerText = "Verde: 0 | Naranja: 0 | No seleccionadas: 0";
+  const totales = document.createElement("div"); totales.className="totales"; totales.id=`totales-${r}`;
+  totales.innerText="Verde: 0 | Naranja: 0 | Combinadas: 0 | No seleccionadas: 0";
   rack.appendChild(totales);
 
   contenedor.appendChild(rack);
@@ -119,68 +91,64 @@ for (let r = 1; r <= totalRacks; r++) {
 }
 
 // Funciones
-function seleccionarRack(rackNum, seleccionar) {
-  const subs = document.querySelectorAll(`.sub[data-rack="${rackNum}"]`);
-  subs.forEach(s => {
-    if (seleccionar) { s.classList.add("seleccionada"); s.classList.remove("piso"); s.dataset.estado = "verde"; }
-    else { s.classList.remove("seleccionada","piso"); s.dataset.estado = "ninguno"; }
+function seleccionarRack(rackNum,seleccionar){
+  const subs=document.querySelectorAll(`.sub[data-rack="${rackNum}"]`);
+  subs.forEach(s=>{
+    if(seleccionar){ s.classList.add("seleccionada"); s.classList.remove("piso"); s.dataset.estado="verde"; }
+    else{ s.classList.remove("seleccionada","piso"); s.dataset.estado="ninguno"; }
   });
   actualizarTotales(rackNum); actualizarGranTotal();
 }
 
-function seleccionarFila(rackNum, nivel, seleccionar) {
-  const subs = document.querySelectorAll(`.sub[data-rack="${rackNum}"][data-nivel="${nivel}"]`);
-  subs.forEach(s => {
-    if (seleccionar) { s.classList.add("seleccionada"); s.classList.remove("piso"); s.dataset.estado = "verde"; }
-    else { s.classList.remove("seleccionada","piso"); s.dataset.estado = "ninguno"; }
+function seleccionarFila(rackNum,nivel,seleccionar){
+  const subs=document.querySelectorAll(`.sub[data-rack="${rackNum}"][data-nivel="${nivel}"]`);
+  subs.forEach(s=>{
+    if(seleccionar){ s.classList.add("seleccionada"); s.classList.remove("piso"); s.dataset.estado="verde"; }
+    else{ s.classList.remove("seleccionada","piso"); s.dataset.estado="ninguno"; }
   });
   actualizarTotales(rackNum); actualizarGranTotal();
 }
 
-function togglePiso(rackNum, nivel) {
-  const subs = document.querySelectorAll(`.sub[data-rack="${rackNum}"][data-nivel="${nivel}"]`);
-  subs.forEach(s => {
-    if (s.classList.contains("piso")) {
-      s.classList.remove("piso"); s.dataset.estado = "ninguno";
-    } else {
-      s.classList.add("piso"); s.classList.remove("seleccionada"); s.dataset.estado = "piso";
-    }
+function togglePiso(rackNum,nivel){
+  const subs=document.querySelectorAll(`.sub[data-rack="${rackNum}"][data-nivel="${nivel}"]`);
+  subs.forEach(s=>{
+    if(s.classList.contains("piso")){ s.classList.remove("piso"); s.dataset.estado="ninguno"; }
+    else{ s.classList.add("piso"); s.classList.remove("seleccionada"); s.dataset.estado="piso"; }
   });
   actualizarTotales(rackNum); actualizarGranTotal();
 }
 
-function seleccionarTodos(seleccionar) {
-  for (let r = 1; r <= totalRacks; r++) seleccionarRack(r, seleccionar);
+function seleccionarTodos(seleccionar){
+  for(let r=1;r<=totalRacks;r++) seleccionarRack(r,seleccionar);
   actualizarGranTotal();
 }
 
-function actualizarTotales(rackNum) {
-  const subs = document.querySelectorAll(`.sub[data-rack="${rackNum}"]`);
-  let verde = 0, naranja = 0;
-  subs.forEach(s => { if(s.dataset.estado==="verde") verde++; if(s.dataset.estado==="piso") naranja++; });
-  const noSel = subs.length - verde - naranja;
-  document.getElementById(`totales-${rackNum}`).innerText =
-    `Rack ${rackNum} → Verde: ${verde} | Naranja: ${naranja} | No seleccionadas: ${noSel}`;
-}
-
-function actualizarGranTotal() {
-  const subs = document.querySelectorAll(".sub");
+function actualizarTotales(rackNum){
+  const subs=document.querySelectorAll(`.sub[data-rack="${rackNum}"]`);
   let verde=0, naranja=0;
-  subs.forEach(s => { if(s.dataset.estado==="verde") verde++; if(s.dataset.estado==="piso") naranja++; });
-  const noSel = subs.length - verde - naranja;
-  document.getElementById("granTotal").innerText =
-    `TOTAL → Verde: ${verde} | Naranja: ${naranja} | No seleccionadas: ${noSel}`;
+  subs.forEach(s=>{ if(s.dataset.estado==="verde") verde++; if(s.dataset.estado==="piso") naranja++; });
+  const combinadas=verde+naranja;
+  const noSel=subs.length-combinadas;
+  document.getElementById(`totales-${rackNum}`).innerText=
+    `Rack ${rackNum} → Verde: ${verde} | Naranja: ${naranja} | Combinadas: ${combinadas} | No seleccionadas: ${noSel}`;
 }
 
-function descargarCSV() {
-  const subs = document.querySelectorAll(".sub");
-  let datos = "Rack,Nivel,Ubicacion,Estado\n";
-  subs.forEach(s => { if(s.dataset.estado!=="ninguno") datos+=`${s.dataset.rack},${s.dataset.nivel},${s.innerText},${s.dataset.estado}\n`; });
-  const blob = new Blob([datos], {type:"text/csv"});
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.download = "ubicaciones_seleccionadas.csv";
-  link.click();
+function actualizarGranTotal(){
+  const subs=document.querySelectorAll(".sub");
+  let verde=0, naranja=0;
+  subs.forEach(s=>{ if(s.dataset.estado==="verde") verde++; if(s.dataset.estado==="piso") naranja++; });
+  const combinadas=verde+naranja;
+  const noSel=subs.length-combinadas;
+  document.getElementById("granTotal").innerText=
+    `TOTAL → Verde: ${verde} | Naranja: ${naranja} | Combinadas: ${combinadas} | No seleccionadas: ${noSel}`;
+}
+
+function descargarCSV(){
+  const subs=document.querySelectorAll(".sub");
+  let datos="Rack,Nivel,Ubicacion,Estado\n";
+  subs.forEach(s=>{ if(s.dataset.estado!=="ninguno") datos+=`${s.dataset.rack},${s.dataset.nivel},${s.innerText},${s.dataset.estado}\n`; });
+  const blob=new Blob([datos],{type:"text/csv"});
+  const link=document.createElement("a"); link.href=URL.createObjectURL(blob); link.download="ubicaciones_seleccionadas.csv"; link.click();
 }
 </script>
 </body>
