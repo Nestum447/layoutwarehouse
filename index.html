@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Bodega Visual Simplificada</title>
+<title>Bodega Visual 15 Racks - Todas Seleccionadas</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
 body { font-family: Arial; background: #f0f0f0; margin:0; padding:10px; }
@@ -10,15 +10,14 @@ h2 { text-align:center; margin-bottom: 10px; }
 #bodega { display:flex; flex-wrap:wrap; justify-content:center; gap:20px; }
 .rack { display:grid; grid-template-columns: repeat(26, 30px); grid-auto-rows: 30px; gap:2px; border:1px solid #333; padding:5px; background:#fff; }
 .rack-title { grid-column: span 26; text-align:center; font-weight:bold; margin-bottom:5px; }
-.subcuadro { display:flex; align-items:center; justify-content:center; font-size:10px; cursor:pointer; user-select:none; background:#ddd; border:1px solid #aaa; }
-.subcuadro.seleccionado { background:#4caf50; color:white; }
+.subcuadro { display:flex; align-items:center; justify-content:center; font-size:10px; cursor:pointer; user-select:none; background:#4caf50; color:white; border:1px solid #aaa; }
 .rack-summary { grid-column: span 26; font-size:12px; margin-top:3px; text-align:center; }
 #info { margin:10px; font-weight:bold; text-align:center; }
 </style>
 </head>
 <body>
 
-<h2>Bodega Visual - Columnas A-Z, Niveles 1-6</h2>
+<h2>Bodega Visual - 15 Racks (Todas sub-ubicaciones seleccionadas)</h2>
 <div id="bodega"></div>
 <div id="info">
   Total sub-ubicaciones seleccionadas: <span id="totalSel">0</span> / No seleccionadas: <span id="totalNoSel">0</span>
@@ -28,7 +27,7 @@ h2 { text-align:center; margin-bottom: 10px; }
 const columnas = Array.from({length:26}, (_,i)=>String.fromCharCode(65+i)); // A-Z
 const niveles = [1,2,3,4,5,6];
 const subUbicaciones = [1,2,3];
-const totalRacks = 1; // Puedes repetir racks si quieres
+const totalRacks = 15;
 
 const bodega = document.getElementById("bodega");
 let racksData = [];
@@ -42,26 +41,22 @@ for(let r=1; r<=totalRacks; r++){
   rackTitle.textContent = `Rack ${r}`;
   rackDiv.appendChild(rackTitle);
 
-  let rackInfo = {rack:r, seleccionadas:0, noSeleccionadas:0, subUbicaciones:[]};
-  let seleccionadasDefault = 0;
+  let rackInfo = {rack:r, subUbicaciones:[]};
 
   columnas.forEach(col=>{
     niveles.forEach(niv=>{
       subUbicaciones.forEach(sub=>{
         const subDiv = document.createElement("div");
-        subDiv.classList.add("subcuadro");
+        subDiv.classList.add("subcuadro"); // ya seleccionado por defecto
         subDiv.dataset.rack = r;
         subDiv.dataset.col = col;
         subDiv.dataset.niv = niv;
         subDiv.dataset.sub = sub;
         subDiv.title = `Rack${r}-${col}${niv}-S${sub}`;
-        subDiv.textContent = sub;
+        subDiv.textContent = `${col}${niv}`;
 
-        // Selección por default: solo dos sub-ubicaciones
-        if(seleccionadasDefault < 2){
-          subDiv.classList.add("seleccionado");
-          seleccionadasDefault++;
-        }
+        // Todas seleccionadas por defecto
+        subDiv.classList.add("seleccionado");
 
         subDiv.addEventListener("click", ()=>{
           subDiv.classList.toggle("seleccionado");
@@ -69,7 +64,7 @@ for(let r=1; r<=totalRacks; r++){
         });
 
         rackDiv.appendChild(subDiv);
-        rackInfo.subUbicaciones.push({col,niv,sub,seleccionado:subDiv.classList.contains("seleccionado")});
+        rackInfo.subUbicaciones.push({col,niv,sub,seleccionado:true});
       });
     });
   });
