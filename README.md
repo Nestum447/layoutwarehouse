@@ -1,4 +1,7 @@
 # layoutwarehouse
+
+https://nestum447.github.io/layoutwarehouse/
+
 # Bodega Visual Interactiva - 15 Racks
 
 Esta es una aplicación web interactiva que simula la **distribución de una bodega** con 15 racks, cada uno con:
