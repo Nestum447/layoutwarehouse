@@ -18,7 +18,8 @@
       text-align: center; line-height: 30px;
       font-size: 10px; cursor: pointer; user-select: none;
     }
-    .sub.seleccionada { background: #4caf50; color: white; }
+    .sub.seleccionada { background: #4caf50; color: white; } /* Verde */
+    .sub.piso { background: orange; color: white; }          /* Naranja */
     .totales { margin-top: 10px; font-weight: bold; }
     .btn {
       margin: 5px 3px; padding: 5px 10px;
@@ -44,7 +45,7 @@
     <button class="btn" onclick="descargarCSV()">⬇ Descargar Seleccionados</button>
   </div>
 
-  <div id="granTotal">Seleccionadas: 0 | No seleccionadas: 0</div>
+  <div id="granTotal">Seleccionadas (Verde+Naranja): 0 | No seleccionadas: 0</div>
 
   <script>
     const letras = "ABCDEFGHIJKLMNOPQRSTUVW".split(""); // A-W
@@ -52,13 +53,12 @@
     const totalRacks = 15;
     const contenedor = document.getElementById("contenedor");
 
-    // Crear 15 racks
     for (let r = 1; r <= totalRacks; r++) {
       const rack = document.createElement("div");
       rack.className = "rack";
       rack.innerHTML = `<h2>Rack ${r}</h2>`;
 
-      // Botones para el rack
+      // Botones rack
       const btnSel = document.createElement("button");
       btnSel.className = "btn";
       btnSel.innerText = "Seleccionar Rack";
@@ -72,12 +72,11 @@
       rack.appendChild(btnSel);
       rack.appendChild(btnDes);
 
-      // Crear filas (niveles)
       niveles.forEach(nivel => {
         const fila = document.createElement("div");
         fila.className = "fila";
 
-        // Botones de control de fila
+        // Botones fila
         const filaBtnSel = document.createElement("button");
         filaBtnSel.className = "btn";
         filaBtnSel.innerText = `Fila ${nivel} ✔`;
@@ -88,8 +87,14 @@
         filaBtnDes.innerText = `Fila ${nivel} ✘`;
         filaBtnDes.onclick = () => seleccionarFila(r, nivel, false);
 
+        const filaBtnPiso = document.createElement("button");
+        filaBtnPiso.className = "btn";
+        filaBtnPiso.innerText = `Ubicación Piso ${nivel}`;
+        filaBtnPiso.onclick = () => pisoFila(r, nivel);
+
         fila.appendChild(filaBtnSel);
         fila.appendChild(filaBtnDes);
+        fila.appendChild(filaBtnPiso);
 
         // Ubicaciones
         letras.forEach(letra => {
@@ -102,11 +107,17 @@
             sub.innerText = `${letra}${nivel}`;
             sub.dataset.rack = r;
             sub.dataset.nivel = nivel;
-            sub.dataset.seleccionada = "false";
+            sub.dataset.estado = "ninguno"; // ninguno, verde, piso
 
             sub.addEventListener("click", () => {
-              sub.classList.toggle("seleccionada");
-              sub.dataset.seleccionada = sub.classList.contains("seleccionada");
+              if (sub.classList.contains("seleccionada")) {
+                sub.classList.remove("seleccionada");
+                sub.dataset.estado = "ninguno";
+              } else {
+                sub.classList.add("seleccionada");
+                sub.classList.remove("piso");
+                sub.dataset.estado = "verde";
+              }
               actualizarTotales(r);
               actualizarGranTotal();
             });
@@ -123,46 +134,56 @@
       const totales = document.createElement("div");
       totales.className = "totales";
       totales.id = `totales-${r}`;
-      totales.innerText = "Seleccionadas: 0 | No seleccionadas: 0";
+      totales.innerText = "Seleccionadas (Verde+Naranja): 0 | No seleccionadas: 0";
       rack.appendChild(totales);
 
       contenedor.appendChild(rack);
       actualizarTotales(r);
     }
 
-    // Seleccionar/Deseleccionar un rack completo
     function seleccionarRack(rackNum, seleccionar) {
       const subs = document.querySelectorAll(`.sub[data-rack="${rackNum}"]`);
       subs.forEach(s => {
         if (seleccionar) {
           s.classList.add("seleccionada");
-          s.dataset.seleccionada = "true";
+          s.classList.remove("piso");
+          s.dataset.estado = "verde";
         } else {
-          s.classList.remove("seleccionada");
-          s.dataset.seleccionada = "false";
+          s.classList.remove("seleccionada", "piso");
+          s.dataset.estado = "ninguno";
         }
       });
       actualizarTotales(rackNum);
       actualizarGranTotal();
     }
 
-    // Seleccionar/Deseleccionar fila
     function seleccionarFila(rackNum, nivel, seleccionar) {
       const subs = document.querySelectorAll(`.sub[data-rack="${rackNum}"][data-nivel="${nivel}"]`);
       subs.forEach(s => {
         if (seleccionar) {
           s.classList.add("seleccionada");
-          s.dataset.seleccionada = "true";
+          s.classList.remove("piso");
+          s.dataset.estado = "verde";
         } else {
-          s.classList.remove("seleccionada");
-          s.dataset.seleccionada = "false";
+          s.classList.remove("seleccionada", "piso");
+          s.dataset.estado = "ninguno";
         }
       });
       actualizarTotales(rackNum);
       actualizarGranTotal();
     }
 
-    // Seleccionar/Deseleccionar todos
+    function pisoFila(rackNum, nivel) {
+      const subs = document.querySelectorAll(`.sub[data-rack="${rackNum}"][data-nivel="${nivel}"]`);
+      subs.forEach(s => {
+        s.classList.remove("seleccionada");
+        s.classList.add("piso");
+        s.dataset.estado = "piso";
+      });
+      actualizarTotales(rackNum);
+      actualizarGranTotal();
+    }
+
     function seleccionarTodos(seleccionar) {
       for (let r = 1; r <= totalRacks; r++) {
         seleccionarRack(r, seleccionar);
@@ -170,31 +191,31 @@
       actualizarGranTotal();
     }
 
-    // Totales por rack y gran total
     function actualizarTotales(rackNum) {
       const subs = document.querySelectorAll(`.sub[data-rack="${rackNum}"]`);
       let seleccionadas = 0;
-      subs.forEach(s => { if (s.dataset.seleccionada === "true") seleccionadas++; });
+      subs.forEach(s => { if (s.dataset.estado === "verde" || s.dataset.estado === "piso") seleccionadas++; });
       const noSeleccionadas = subs.length - seleccionadas;
       document.getElementById(`totales-${rackNum}`).innerText =
-        `Rack ${rackNum} → Seleccionadas: ${seleccionadas} | No seleccionadas: ${noSeleccionadas}`;
+        `Rack ${rackNum} → Seleccionadas (Verde+Naranja): ${seleccionadas} | No seleccionadas: ${noSeleccionadas}`;
     }
 
     function actualizarGranTotal() {
       const subs = document.querySelectorAll(".sub");
       let seleccionadas = 0;
-      subs.forEach(s => { if (s.dataset.seleccionada === "true") seleccionadas++; });
+      subs.forEach(s => { if (s.dataset.estado === "verde" || s.dataset.estado === "piso") seleccionadas++; });
       const noSeleccionadas = subs.length - seleccionadas;
       document.getElementById("granTotal").innerText =
-        `TOTAL → Seleccionadas: ${seleccionadas} | No seleccionadas: ${noSeleccionadas}`;
+        `TOTAL → Seleccionadas (Verde+Naranja): ${seleccionadas} | No seleccionadas: ${noSeleccionadas}`;
     }
 
-    // Descargar CSV
     function descargarCSV() {
-      const subs = document.querySelectorAll(".sub.seleccionada");
-      let datos = "Rack,Nivel,Ubicacion\n";
+      const subs = document.querySelectorAll(".sub");
+      let datos = "Rack,Nivel,Ubicacion,Estado\n";
       subs.forEach(s => {
-        datos += `${s.dataset.rack},${s.dataset.nivel},${s.innerText}\n`;
+        if (s.dataset.estado !== "ninguno") {
+          datos += `${s.dataset.rack},${s.dataset.nivel},${s.innerText},${s.dataset.estado}\n`;
+        }
       });
 
       const blob = new Blob([datos], { type: "text/csv" });
