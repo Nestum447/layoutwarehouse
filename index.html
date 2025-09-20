@@ -39,28 +39,58 @@ const niveles = [1,2,3,4,5,6];
 const totalRacks = 15;
 const contenedor = document.getElementById("contenedor");
 
+// Funciones de guardado/carga en localStorage
+function guardarConfiguracion() {
+  const estados = {};
+  document.querySelectorAll(".sub").forEach(s => {
+    const key = `${s.dataset.rack}-${s.dataset.nivel}-${s.innerText}`;
+    estados[key] = s.dataset.estado;
+  });
+  localStorage.setItem("configRacks", JSON.stringify(estados));
+}
+function cargarConfiguracion() {
+  const data = localStorage.getItem("configRacks");
+  if (!data) return;
+  const estados = JSON.parse(data);
+
+  document.querySelectorAll(".sub").forEach(s => {
+    const key = `${s.dataset.rack}-${s.dataset.nivel}-${s.innerText}`;
+    const estado = estados[key];
+    s.classList.remove("seleccionada","piso");
+    s.dataset.estado="ninguno";
+    if (estado === "verde") {
+      s.classList.add("seleccionada");
+      s.dataset.estado="verde";
+    } else if (estado === "piso") {
+      s.classList.add("piso");
+      s.dataset.estado="piso";
+    }
+  });
+
+  for(let r=1;r<=totalRacks;r++) actualizarTotales(r);
+  actualizarGranTotal();
+}
+
 // Crear racks interactivos
 for(let r=1; r<=totalRacks; r++){
   const rack = document.createElement("div"); rack.className="rack";
   rack.innerHTML=`<h2>Rack ${r}</h2>`;
 
-  // Botones rack
   const btnSel = document.createElement("button"); btnSel.className="btn"; btnSel.innerText="Seleccionar Rack";
-  btnSel.onclick = () => seleccionarRack(r,true);
+  btnSel.onclick = () => { seleccionarRack(r,true); guardarConfiguracion(); };
   const btnDes = document.createElement("button"); btnDes.className="btn"; btnDes.innerText="Deseleccionar Rack";
-  btnDes.onclick = () => seleccionarRack(r,false);
+  btnDes.onclick = () => { seleccionarRack(r,false); guardarConfiguracion(); };
   rack.appendChild(btnSel); rack.appendChild(btnDes);
 
-  // Crear filas y sububicaciones
   niveles.forEach(nivel=>{
     const fila = document.createElement("div"); fila.className="fila";
 
     const filaBtnSel = document.createElement("button"); filaBtnSel.className="btn"; filaBtnSel.innerText=`Fila ${nivel} ✔`;
-    filaBtnSel.onclick = () => seleccionarFila(r,nivel,true);
+    filaBtnSel.onclick = () => { seleccionarFila(r,nivel,true); guardarConfiguracion(); };
     const filaBtnDes = document.createElement("button"); filaBtnDes.className="btn"; filaBtnDes.innerText=`Fila ${nivel} ✘`;
-    filaBtnDes.onclick = () => seleccionarFila(r,nivel,false);
+    filaBtnDes.onclick = () => { seleccionarFila(r,nivel,false); guardarConfiguracion(); };
     const filaBtnPiso = document.createElement("button"); filaBtnPiso.className="btn"; filaBtnPiso.innerText=`Ubicación Piso ${nivel}`;
-    filaBtnPiso.onclick = () => togglePiso(r,nivel);
+    filaBtnPiso.onclick = () => { togglePiso(r,nivel); guardarConfiguracion(); };
 
     fila.appendChild(filaBtnSel); fila.appendChild(filaBtnDes); fila.appendChild(filaBtnPiso);
 
@@ -75,7 +105,7 @@ for(let r=1; r<=totalRacks; r++){
           }else{
             sub.classList.add("seleccionada"); sub.classList.remove("piso"); sub.dataset.estado="verde";
           }
-          actualizarTotales(r); actualizarGranTotal();
+          actualizarTotales(r); actualizarGranTotal(); guardarConfiguracion();
         });
         ubicacion.appendChild(sub);
       }
@@ -89,6 +119,8 @@ for(let r=1; r<=totalRacks; r++){
   rack.appendChild(totales);
   contenedor.appendChild(rack);
   actualizarTotales(r);
+
+  if (r === totalRacks) cargarConfiguracion(); // cargar al final
 }
 
 // Funciones de selección
@@ -119,6 +151,7 @@ function togglePiso(rackNum,nivel){
 function seleccionarTodos(seleccionar){
   for(let r=1;r<=totalRacks;r++) seleccionarRack(r,seleccionar);
   actualizarGranTotal();
+  guardarConfiguracion();
 }
 
 // Actualización de totales
@@ -141,7 +174,7 @@ function actualizarGranTotal(){
     `TOTAL → Verde: ${verde} | Naranja: ${naranja} | Combinadas: ${combinadas} | No seleccionadas: ${noSel}`;
 }
 
-// Descarga Excel con colores
+// Descarga Excel
 function descargarExcel(){
   const wb = XLSX.utils.book_new();
   const ws_data = [];
@@ -164,7 +197,6 @@ function descargarExcel(){
       ws_data.push(row);
     });
 
-    // Totales rack
     const subsRack=document.querySelectorAll(`.sub[data-rack="${r}"]`);
     let verde=0, naranja=0;
     subsRack.forEach(s=>{ if(s.dataset.estado==="verde") verde++; if(s.dataset.estado==="piso") naranja++; });
@@ -174,7 +206,6 @@ function descargarExcel(){
 
   const ws = XLSX.utils.aoa_to_sheet(ws_data);
 
-  // Colorear celdas
   ws_data.forEach((fila,rIndex)=>{
     fila.forEach((val,cIndex)=>{
       const cell_ref = XLSX.utils.encode_cell({c:cIndex,r:rIndex});
