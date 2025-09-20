@@ -39,22 +39,24 @@ const niveles = [1,2,3,4,5,6];
 const totalRacks = 15;
 const contenedor = document.getElementById("contenedor");
 
-// Funciones de guardado/carga en localStorage
+// Guardar configuración en localStorage (clave única por sub)
 function guardarConfiguracion() {
   const estados = {};
-  document.querySelectorAll(".sub").forEach(s => {
-    const key = `${s.dataset.rack}-${s.dataset.nivel}-${s.innerText}`;
+  document.querySelectorAll(".sub").forEach((s, idx) => {
+    const key = `${s.dataset.rack}-${s.dataset.nivel}-${s.innerText}-${idx}`;
     estados[key] = s.dataset.estado;
   });
   localStorage.setItem("configRacks", JSON.stringify(estados));
 }
+
+// Cargar configuración desde localStorage
 function cargarConfiguracion() {
   const data = localStorage.getItem("configRacks");
   if (!data) return;
   const estados = JSON.parse(data);
 
-  document.querySelectorAll(".sub").forEach(s => {
-    const key = `${s.dataset.rack}-${s.dataset.nivel}-${s.innerText}`;
+  document.querySelectorAll(".sub").forEach((s, idx) => {
+    const key = `${s.dataset.rack}-${s.dataset.nivel}-${s.innerText}-${idx}`;
     const estado = estados[key];
     s.classList.remove("seleccionada","piso");
     s.dataset.estado="ninguno";
