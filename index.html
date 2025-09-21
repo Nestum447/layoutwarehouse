@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Racks Interactivos con Firebase</title>
+<title>15 Racks Interactivos con Firebase</title>
 <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 
 <!-- Firebase SDK compat -->
@@ -60,16 +60,19 @@ const db = firebase.firestore();
 ======================= */
 const letras = "ABCDEFGHIJKLMNOPQRSTUVW".split("");
 const niveles = [1,2,3,4,5,6];
-const totalRacks = 15; // Ajustado a 15 racks
+const totalRacks = 15; // Ahora son 15 racks
 const contenedor = document.getElementById("contenedor");
 let estadoGlobal = {}; // Guardará todos los estados
+
+// Documento independiente para esta app
+const docFirebase = "estado_15_racks";
 
 /* =======================
   Guardar estado en Firestore
 ======================= */
 async function guardarEstado(){
   try{
-    await db.collection("racks").doc("estado").set(estadoGlobal);
+    await db.collection("racks").doc(docFirebase).set(estadoGlobal);
   }catch(e){ console.error(e); }
 }
 
@@ -78,7 +81,7 @@ async function guardarEstado(){
 ======================= */
 async function crearRacks(){
   try{
-    const docSnap = await db.collection("racks").doc("estado").get();
+    const docSnap = await db.collection("racks").doc(docFirebase).get();
     if(docSnap.exists) estadoGlobal = docSnap.data();
   }catch(e){ console.error(e); }
 
@@ -107,7 +110,7 @@ async function crearRacks(){
 
       letras.forEach(letra=>{
         const ubicacion = document.createElement("div"); ubicacion.className="ubicacion";
-        const numSub = 3; // Todos con 3 sububicaciones
+        const numSub = 3; // Todos los racks con 3 sububicaciones
 
         for(let i=1;i<=numSub;i++){
           const sub = document.createElement("div"); sub.className="sub"; 
