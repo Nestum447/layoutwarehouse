@@ -17,16 +17,15 @@ h2 { margin-top: 30px; }
       text-align: center; line-height: 30px; font-size: 10px; cursor: pointer; user-select: none; }
 .sub.seleccionada { background: #4caf50; color: white; }
 .sub.piso { background: orange; color: white; }
-.totales { margin-top: 10px; font-weight: bold; }
 .btn { margin: 5px 3px; padding: 5px 10px; background: #2196f3; color: #fff; border: none; border-radius: 5px; cursor:pointer; }
 .btn:hover { background: #1976d2; }
 #globalButtons { margin: 20px 0; text-align: center; }
 
 #dashboard { position: sticky; top: 0; background: #eee; padding: 10px; border-radius: 10px; margin-bottom: 20px; display: flex; justify-content: space-around; align-items: center; gap:20px; }
-.panel { width: 150px; }
+.panel { width: 200px; }
 .label { font-weight: bold; margin-bottom: 5px; text-align:center; }
-.barContainer { background: #ccc; border-radius: 10px; height: 20px; width: 100%; overflow: hidden; }
-.bar { height: 100%; border-radius: 10px 0 0 10px; text-align: right; padding-right:5px; color:#fff; font-size:12px; line-height:20px; }
+.barContainer { background: #ccc; border-radius: 10px; height: 20px; width: 100%; overflow: hidden; display: flex; }
+.bar { height: 100%; text-align: center; color:#fff; font-size:12px; line-height:20px; }
 .verde { background:#4caf50; }
 .naranja { background:orange; }
 .gris { background:#999; }
@@ -42,6 +41,7 @@ h2 { margin-top: 30px; }
     <div class="barContainer">
       <div class="bar verde" id="barraVerdeSL">0</div>
       <div class="bar naranja" id="barraNaranjaSL">0</div>
+      <div class="bar gris" id="barraNoSL">0</div>
     </div>
   </div>
   <div class="panel">
@@ -49,12 +49,15 @@ h2 { margin-top: 30px; }
     <div class="barContainer">
       <div class="bar verde" id="barraVerdeSW">0</div>
       <div class="bar naranja" id="barraNaranjaSW">0</div>
+      <div class="bar gris" id="barraNoSW">0</div>
     </div>
   </div>
   <div class="panel">
     <div class="label">Total General</div>
     <div class="barContainer">
-      <div class="bar verde" id="barraTotal">0</div>
+      <div class="bar verde" id="barraTotalVerde">0</div>
+      <div class="bar naranja" id="barraTotalNaranja">0</div>
+      <div class="bar gris" id="barraTotalNo">0</div>
     </div>
   </div>
 </div>
@@ -94,7 +97,7 @@ const contenedor = document.getElementById("contenedor");
 let estadoGlobal = {}; 
 
 /* =======================
- Funciones de racks
+ Crear racks
 ======================= */
 async function guardarEstado(){ try{ await db.collection("racks").doc("estado").set(estadoGlobal); }catch(e){ console.error(e); } }
 
@@ -159,7 +162,7 @@ async function crearRacks(){
 }
 
 /* =======================
- Funciones de selección
+ Selección
 ======================= */
 function seleccionarRack(rackName, seleccionar){
   document.querySelectorAll(`.sub[data-rack="${rackName}"]`).forEach(s=>{
@@ -191,41 +194,48 @@ function seleccionarTodos(seleccionar){
 }
 
 /* =======================
- Dashboard gráfico
+ Dashboard con 3 colores
 ======================= */
 function actualizarDashboard(){
-  let verdeSL=0, naranjaSL=0, verdeSW=0, naranjaSW=0;
-  let totalSL=0, totalSW=0;
+  let verdeSL=0, naranjaSL=0, noSL=0;
+  let verdeSW=0, naranjaSW=0, noSW=0;
 
   document.querySelectorAll(".sub").forEach(s=>{
     if(s.dataset.rack.startsWith("RACK SL")){
-      totalSL++;
       if(s.dataset.estado==="verde") verdeSL++;
       else if(s.dataset.estado==="piso") naranjaSL++;
+      else noSL++;
     } else if(s.dataset.rack.startsWith("RACK SW")){
-      totalSW++;
       if(s.dataset.estado==="verde") verdeSW++;
       else if(s.dataset.estado==="piso") naranjaSW++;
+      else noSW++;
     }
   });
 
-  const anchoVerdeSL = (verdeSL/totalSL)*100;
-  const anchoNaranjaSL = (naranjaSL/totalSL)*100;
-  const anchoVerdeSW = (verdeSW/totalSW)*100;
-  const anchoNaranjaSW = (naranjaSW/totalSW)*100;
+  const totalSL = verdeSL+naranjaSL+noSL;
+  const totalSW = verdeSW+naranjaSW+noSW;
+  const total = totalSL + totalSW;
 
-  document.getElementById("barraVerdeSL").style.width = anchoVerdeSL + "%";
+  document.getElementById("barraVerdeSL").style.width = (verdeSL/totalSL*100)+"%";
   document.getElementById("barraVerdeSL").innerText = verdeSL;
-  document.getElementById("barraNaranjaSL").style.width = anchoNaranjaSL + "%";
+  document.getElementById("barraNaranjaSL").style.width = (naranjaSL/totalSL*100)+"%";
   document.getElementById("barraNaranjaSL").innerText = naranjaSL;
+  document.getElementById("barraNoSL").style.width = (noSL/totalSL*100)+"%";
+  document.getElementById("barraNoSL").innerText = noSL;
 
-  document.getElementById("barraVerdeSW").style.width = anchoVerdeSW + "%";
+  document.getElementById("barraVerdeSW").style.width = (verdeSW/totalSW*100)+"%";
   document.getElementById("barraVerdeSW").innerText = verdeSW;
-  document.getElementById("barraNaranjaSW").style.width = anchoNaranjaSW + "%";
+  document.getElementById("barraNaranjaSW").style.width = (naranjaSW/totalSW*100)+"%";
   document.getElementById("barraNaranjaSW").innerText = naranjaSW;
+  document.getElementById("barraNoSW").style.width = (noSW/totalSW*100)+"%";
+  document.getElementById("barraNoSW").innerText = noSW;
 
-  document.getElementById("barraTotal").style.width = ((verdeSL+naranjaSL+verdeSW+naranjaSW)/(totalSL+totalSW)*100) + "%";
-  document.getElementById("barraTotal").innerText = verdeSL+naranjaSL+verdeSW+naranjaSW;
+  document.getElementById("barraTotalVerde").style.width = ((verdeSL+verdeSW)/total*100)+"%";
+  document.getElementById("barraTotalVerde").innerText = verdeSL+verdeSW;
+  document.getElementById("barraTotalNaranja").style.width = ((naranjaSL+naranjaSW)/total*100)+"%";
+  document.getElementById("barraTotalNaranja").innerText = naranjaSL+naranjaSW;
+  document.getElementById("barraTotalNo").style.width = ((noSL+noSW)/total*100)+"%";
+  document.getElementById("barraTotalNo").innerText = noSL+noSW;
 }
 
 /* =======================
@@ -258,7 +268,7 @@ function descargarExcel(){
 }
 
 /* =======================
- Ejecutar creación
+ Ejecutar
 ======================= */
 crearRacks();
 
