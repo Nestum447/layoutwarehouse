@@ -105,28 +105,28 @@ async function crearRacks(){
   }catch(e){ console.error(e); }
 
   const todosRacks = [];
-  for(let i=1;i<=racksSL;i++) todosRacks.push("RACK SL" + (i<10?"0"+i:i));
-  for(let i=1;i<=racksSW;i++) todosRacks.push("RACK SW" + (i<10?"0"+i:i));
+  for(let i=1;i<=racksSL;i++) todosRacks.push("RACKSL" + (i<10?"0"+i:i));
+  for(let i=1;i<=racksSW;i++) todosRacks.push("RACKSW" + (i<10?"0"+i:i));
 
-  todosRacks.forEach((rackName)=>{
+  todosRacks.forEach((rackId)=>{
     const rack = document.createElement("div"); rack.className="rack";
-    rack.innerHTML=`<h2>${rackName}</h2>`;
+    rack.innerHTML=`<h2>${rackId}</h2>`;
 
     const btnSel = document.createElement("button"); btnSel.className="btn"; btnSel.innerText="Seleccionar Rack";
-    btnSel.onclick = () => seleccionarRack(rackName,true);
+    btnSel.onclick = () => seleccionarRack(rackId,true);
     const btnDes = document.createElement("button"); btnDes.className="btn"; btnDes.innerText="Deseleccionar Rack";
-    btnDes.onclick = () => seleccionarRack(rackName,false);
+    btnDes.onclick = () => seleccionarRack(rackId,false);
     rack.appendChild(btnSel); rack.appendChild(btnDes);
 
     niveles.forEach(nivel=>{
       const fila = document.createElement("div"); fila.className="fila";
 
       const filaBtnSel = document.createElement("button"); filaBtnSel.className="btn"; filaBtnSel.innerText=`Fila ${nivel} ✔`;
-      filaBtnSel.onclick = () => seleccionarFila(rackName,nivel,true);
+      filaBtnSel.onclick = () => seleccionarFila(rackId,nivel,true);
       const filaBtnDes = document.createElement("button"); filaBtnDes.className="btn"; filaBtnDes.innerText=`Fila ${nivel} ✘`;
-      filaBtnDes.onclick = () => seleccionarFila(rackName,nivel,false);
+      filaBtnDes.onclick = () => seleccionarFila(rackId,nivel,false);
       const filaBtnPiso = document.createElement("button"); filaBtnPiso.className="btn"; filaBtnPiso.innerText=`Ubicación Piso ${nivel}`;
-      filaBtnPiso.onclick = () => togglePiso(rackName,nivel);
+      filaBtnPiso.onclick = () => togglePiso(rackId,nivel);
 
       fila.appendChild(filaBtnSel); fila.appendChild(filaBtnDes); fila.appendChild(filaBtnPiso);
 
@@ -135,8 +135,8 @@ async function crearRacks(){
         for(let i=1;i<=3;i++){
           const sub = document.createElement("div"); sub.className="sub"; 
           sub.innerText=`${letra}${nivel}`;
-          const idSub = `${rackName.replace(/\s/g,'')}_n${nivel}_l${letra}_i${i}`;
-          sub.dataset.rack = rackName.replace(/\s/g,''); 
+          const idSub = `${rackId}_n${nivel}_l${letra}_i${i}`;
+          sub.dataset.rack = rackId; 
           sub.dataset.nivel = nivel; 
           sub.dataset.id = idSub; 
           sub.dataset.estado="ninguno";
@@ -150,7 +150,7 @@ async function crearRacks(){
             }else{
               sub.classList.add("seleccionada"); sub.classList.remove("piso"); sub.dataset.estado="verde"; estadoGlobal[idSub]="verde";
             }
-            actualizarDashboard(); actualizarTotalesRack(rackName);
+            actualizarDashboard(); actualizarTotalesRack(rackId);
             guardarEstado();
           });
           ubicacion.appendChild(sub);
@@ -160,10 +160,10 @@ async function crearRacks(){
       rack.appendChild(fila);
     });
 
-    const totalesRack = document.createElement("div"); totalesRack.className="totalesRack"; totalesRack.id=`totales-${rackName.replace(/\s/g,'')}`;
+    const totalesRack = document.createElement("div"); totalesRack.className="totalesRack"; totalesRack.id=`totales-${rackId}`;
     rack.appendChild(totalesRack);
     contenedor.appendChild(rack);
-    actualizarTotalesRack(rackName);
+    actualizarTotalesRack(rackId);
   });
   actualizarDashboard();
 }
@@ -171,94 +171,89 @@ async function crearRacks(){
 /* =======================
   Funciones selección
 ======================= */
-function seleccionarRack(rackName,seleccionar){
-  document.querySelectorAll(`.sub[data-rack="${rackName.replace(/\s/g,'')}"]`).forEach(s=>{
+function seleccionarRack(rackId,seleccionar){
+  document.querySelectorAll(`.sub[data-rack="${rackId}"]`).forEach(s=>{
     if(seleccionar){ s.classList.add("seleccionada"); s.classList.remove("piso"); s.dataset.estado="verde"; estadoGlobal[s.dataset.id]="verde"; }
     else{ s.classList.remove("seleccionada","piso"); s.dataset.estado="ninguno"; estadoGlobal[s.dataset.id]="ninguno"; }
   });
-  actualizarTotalesRack(rackName); actualizarDashboard(); guardarEstado();
+  actualizarTotalesRack(rackId); actualizarDashboard(); guardarEstado();
 }
 
-function seleccionarFila(rackName,nivel,seleccionar){
-  document.querySelectorAll(`.sub[data-rack="${rackName.replace(/\s/g,'')}"][data-nivel="${nivel}"]`).forEach(s=>{
+function seleccionarFila(rackId,nivel,seleccionar){
+  document.querySelectorAll(`.sub[data-rack="${rackId}"][data-nivel="${nivel}"]`).forEach(s=>{
     if(seleccionar){ s.classList.add("seleccionada"); s.classList.remove("piso"); s.dataset.estado="verde"; estadoGlobal[s.dataset.id]="verde"; }
     else{ s.classList.remove("seleccionada","piso"); s.dataset.estado="ninguno"; estadoGlobal[s.dataset.id]="ninguno"; }
   });
-  actualizarTotalesRack(rackName); actualizarDashboard(); guardarEstado();
+  actualizarTotalesRack(rackId); actualizarDashboard(); guardarEstado();
 }
 
-function togglePiso(rackName,nivel){
-  document.querySelectorAll(`.sub[data-rack="${rackName.replace(/\s/g,'')}"][data-nivel="${nivel}"]`).forEach(s=>{
+function togglePiso(rackId,nivel){
+  document.querySelectorAll(`.sub[data-rack="${rackId}"][data-nivel="${nivel}"]`).forEach(s=>{
     if(s.classList.contains("piso")){ s.classList.remove("piso"); s.dataset.estado="ninguno"; estadoGlobal[s.dataset.id]="ninguno"; }
     else{ s.classList.add("piso"); s.classList.remove("seleccionada"); s.dataset.estado="piso"; estadoGlobal[s.dataset.id]="piso"; }
   });
-  actualizarTotalesRack(rackName); actualizarDashboard(); guardarEstado();
+  actualizarTotalesRack(rackId); actualizarDashboard(); guardarEstado();
 }
 
 function seleccionarTodos(seleccionar){
-  for(let i=1;i<=racksSL;i++) seleccionarRack("RACK SL"+(i<10?"0"+i:i),seleccionar);
-  for(let i=1;i<=racksSW;i++) seleccionarRack("RACK SW"+(i<10?"0"+i:i),seleccionar);
+  for(let i=1;i<=racksSL;i++) seleccionarRack("RACKSL"+(i<10?"0"+i:i),seleccionar);
+  for(let i=1;i<=racksSW;i++) seleccionarRack("RACKSW"+(i<10?"0"+i:i),seleccionar);
   actualizarDashboard(); guardarEstado();
 }
 
 /* =======================
   Totales
 ======================= */
-function actualizarTotalesRack(rackName){
-  const subs = document.querySelectorAll(`.sub[data-rack="${rackName.replace(/\s/g,'')}"]`);
+function actualizarTotalesRack(rackId){
+  const subs = document.querySelectorAll(`.sub[data-rack="${rackId}"]`);
   let verde=0, naranja=0;
   subs.forEach(s=>{ if(s.dataset.estado==="verde") verde++; if(s.dataset.estado==="piso") naranja++; });
   const combinadas = verde + naranja;
   const noSel = subs.length - combinadas;
-  document.getElementById(`totales-${rackName.replace(/\s/g,'')}`).innerText = 
-    `${rackName} → Verde: ${verde} | Naranja: ${naranja} | No seleccionadas: ${noSel}`;
+  document.getElementById(`totales-${rackId}`).innerText = 
+    `${rackId} → Verde: ${verde} | Naranja: ${naranja} | No seleccionadas: ${noSel}`;
 }
 
 /* =======================
   Dashboard barras y totales
 ======================= */
 function actualizarDashboard(){
-  const racksSLList = [];
-  for(let i=1;i<=racksSL;i++) racksSLList.push("RACK SL"+(i<10?"0"+i:i));
-  const racksSWList = [];
-  for(let i=1;i<=racksSW;i++) racksSWList.push("RACK SW"+(i<10?"0"+i:i));
+  const racksSLArray = []; for(let i=1;i<=racksSL;i++) racksSLArray.push("RACKSL"+(i<10?"0"+i:i));
+  const racksSWArray = []; for(let i=1;i<=racksSW;i++) racksSWArray.push("RACKSW"+(i<10?"0"+i:i));
 
-  function calcularTotales(racks){
-    let verde=0, naranja=0, total=0;
-    racks.forEach(r=>{
-      const subs = document.querySelectorAll(`.sub[data-rack="${r.replace(/\s/g,'')}"]`);
-      subs.forEach(s=>{
-        if(s.dataset.estado==="verde") verde++;
-        else if(s.dataset.estado==="piso") naranja++;
-      });
-      total += subs.length;
-    });
-    return {verde,naranja,noSel: total-(verde+naranja),total};
+  let verdeSL=0,naranjaSL=0,noSL=0,verdeSW=0,naranjaSW=0,noSW=0;
+
+  racksSLArray.forEach(r=>{ document.querySelectorAll(`.sub[data-rack="${r}"]`).forEach(s=>{
+    if(s.dataset.estado==="verde") verdeSL++; else if(s.dataset.estado==="piso") naranjaSL++; else noSL++;
+  });});
+  racksSWArray.forEach(r=>{ document.querySelectorAll(`.sub[data-rack="${r}"]`).forEach(s=>{
+    if(s.dataset.estado==="verde") verdeSW++; else if(s.dataset.estado==="piso") naranjaSW++; else noSW++;
+  });});
+
+  const totalVerde = verdeSL+verdeSW;
+  const totalNaranja = naranjaSL+naranjaSW;
+  const totalNo = noSL+noSW;
+
+  const totalSL = verdeSL+naranjaSL+noSL;
+  const totalSW = verdeSW+naranjaSW+noSW;
+  const totalAll = totalVerde+totalNaranja+totalNo;
+
+  function actualizarBar(id,valor,total){ 
+    const perc = total>0?Math.round((valor/total)*100):0;
+    const bar = document.getElementById(id); bar.style.width=perc+"%"; bar.innerText=perc+"%";
   }
 
-  const totSL = calcularTotales(racksSLList);
-  const totSW = calcularTotales(racksSWList);
-  const totTotal = {verde: totSL.verde+totSW.verde, naranja: totSL.naranja+totSW.naranja, noSel: totSL.noSel+totSW.noSel, total: totSL.total+totSW.total};
+  actualizarBar("barraVerdeSL",verdeSL,totalSL); actualizarBar("barraNaranjaSL",naranjaSL,totalSL); actualizarBar("barraNoSL",noSL,totalSL);
+  actualizarBar("barraVerdeSW",verdeSW,totalSW); actualizarBar("barraNaranjaSW",naranjaSW,totalSW); actualizarBar("barraNoSW",noSW,totalSW);
+  actualizarBar("barraTotalVerde",totalVerde,totalAll); actualizarBar("barraTotalNaranja",totalNaranja,totalAll); actualizarBar("barraTotalNo",totalNo,totalAll);
 
-  function actualizarBar(idVerde,idNaranja,idNo,numVerde,numNaranja,numNo,tot){
-    const pctV = ((tot.verde/tot.total)*100).toFixed(1);
-    const pctN = ((tot.naranja/tot.total)*100).toFixed(1);
-    const pctNo = ((tot.noSel/tot.total)*100).toFixed(1);
-    document.getElementById(idVerde).style.width = pctV+"%"; document.getElementById(idVerde).innerText = pctV+"%";
-    document.getElementById(idNaranja).style.width = pctN+"%"; document.getElementById(idNaranja).innerText = pctN+"%";
-    document.getElementById(idNo).style.width = pctNo+"%"; document.getElementById(idNo).innerText = pctNo+"%";
-    document.getElementById(numVerde).innerText = tot.verde;
-    document.getElementById(numNaranja).innerText = tot.naranja;
-    document.getElementById(numNo).innerText = tot.noSel;
-  }
-
-  actualizarBar("barraVerdeSL","barraNaranjaSL","barraNoSL","numVerdeSL","numNaranjaSL","numNoSL",totSL);
-  actualizarBar("barraVerdeSW","barraNaranjaSW","barraNoSW","numVerdeSW","numNaranjaSW","numNoSW",totSW);
-  actualizarBar("barraTotalVerde","barraTotalNaranja","barraTotalNo","numTotalVerde","numTotalNaranja","numTotalNo",totTotal);
+  document.getElementById("numVerdeSL").innerText=verdeSL; document.getElementById("numNaranjaSL").innerText=naranjaSL; document.getElementById("numNoSL").innerText=noSL;
+  document.getElementById("numVerdeSW").innerText=verdeSW; document.getElementById("numNaranjaSW").innerText=naranjaSW; document.getElementById("numNoSW").innerText=noSW;
+  document.getElementById("numTotalVerde").innerText=totalVerde; document.getElementById("numTotalNaranja").innerText=totalNaranja; document.getElementById("numTotalNo").innerText=totalNo;
 }
 
 /* =======================
-  Guardar estado en Firebase
+  Guardar en Firebase
 ======================= */
 async function guardarEstado(){
   try{ await db.collection("racks").doc("estado").set(estadoGlobal); }catch(e){ console.error(e); }
@@ -271,16 +266,16 @@ function descargarExcel(){
   const wb = XLSX.utils.book_new();
   const ws_data = [];
   const todosRacks = [];
-  for(let i=1;i<=racksSL;i++) todosRacks.push("RACK SL"+(i<10?"0"+i:i));
-  for(let i=1;i<=racksSW;i++) todosRacks.push("RACK SW"+(i<10?"0"+i:i));
+  for(let i=1;i<=racksSL;i++) todosRacks.push("RACKSL"+(i<10?"0"+i:i));
+  for(let i=1;i<=racksSW;i++) todosRacks.push("RACKSW"+(i<10?"0"+i:i));
 
-  todosRacks.forEach(r=>{
-    ws_data.push([r]);
+  todosRacks.forEach(rackId=>{
+    ws_data.push([rackId]);
     niveles.forEach(nivel=>{
-      const row = [];
+      const row=[];
       letras.forEach(letra=>{
         for(let i=1;i<=3;i++){
-          const idSub = `${r.replace(/\s/g,'')}_n${nivel}_l${letra}_i${i}`;
+          const idSub = `${rackId}_n${nivel}_l${letra}_i${i}`;
           const val = estadoGlobal[idSub];
           if(val==="verde") row.push("V");
           else if(val==="piso") row.push("P");
@@ -289,23 +284,22 @@ function descargarExcel(){
       });
       ws_data.push(row);
     });
-    const subsRack = document.querySelectorAll(`.sub[data-rack="${r.replace(/\s/g,'')}"]`);
-    let verde=0, naranja=0;
+    const subsRack = document.querySelectorAll(`.sub[data-rack="${rackId}"]`);
+    let verde=0,naranja=0;
     subsRack.forEach(s=>{ if(s.dataset.estado==="verde") verde++; if(s.dataset.estado==="piso") naranja++; });
-    ws_data.push([`Totales: Verde=${verde} Naranja=${naranja} Combinadas=${verde+naranja}`]);
+    ws_data.push([`Totales ${rackId}: Verde=${verde} Naranja=${naranja} Combinadas=${verde+naranja}`]);
     ws_data.push([]);
   });
 
   const ws = XLSX.utils.aoa_to_sheet(ws_data);
-  XLSX.utils.book_append_sheet(wb,ws,"Bodega Completa");
+  XLSX.utils.book_append_sheet(wb, ws, "Bodega Completa");
   XLSX.writeFile(wb,"Bodega_Racks.xlsx");
 }
 
 /* =======================
-  Ejecutar creación de racks
+  Inicializar
 ======================= */
 crearRacks();
 </script>
-
 </body>
 </html>
