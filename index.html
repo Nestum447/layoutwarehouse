@@ -9,7 +9,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.2.0/firebase-firestore-compat.js"></script>
 
 <style>
-body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f5f5f5; }
 h2 { margin-top: 30px; }
 .rack { margin-bottom: 30px; padding: 10px; background: #fff; border: 2px solid #ccc; border-radius: 10px; }
 .fila { display: flex; flex-wrap: nowrap; margin-bottom: 5px; align-items: center; }
@@ -33,63 +33,80 @@ h2 { margin-top: 30px; }
 
 .totalesRack { margin-top:10px; font-weight:bold; }
 
+/* --- Login Modal --- */
 #loginModal {
-  position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); display:flex; justify-content:center; align-items:center; z-index:9999;
+  position: fixed;
+  top:0; left:0;
+  width:100%; height:100%;
+  background: rgba(0,0,0,0.5);
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  z-index:9999;
 }
-#loginModal button { padding: 15px 25px; font-size:16px; cursor:pointer; }
-#appContent { display:none; }
+#loginModal button {
+  padding: 20px 30px;
+  font-size: 18px;
+  cursor:pointer;
+  max-width: 90%;
+}
+
+/* --- App Content oculto hasta login --- */
+#appContent { display:none; padding: 20px; }
 </style>
 </head>
 <body>
 
 <div id="loginModal">
-  <button id="loginBtn">Iniciar sesión con Google</button>
+  <button id="googleLoginBtn">Iniciar sesión con Google</button>
 </div>
 
 <div id="appContent">
-<h1>📦 Simulación de Bodega con Racks SL y SW + Firebase</h1>
+  <h1>📦 Simulación de Bodega con Racks SL y SW + Firebase</h1>
 
-<div id="dashboard">
-  <div class="panel">
-    <div class="label">SL</div>
-    <div class="barContainer">
-      <div class="bar verde" id="barraVerdeSL"></div>
-      <div class="bar naranja" id="barraNaranjaSL"></div>
-      <div class="bar gris" id="barraNoSL"></div>
+  <div id="dashboard">
+    <div class="panel">
+      <div class="label">SL</div>
+      <div class="barContainer">
+        <div class="bar verde" id="barraVerdeSL"></div>
+        <div class="bar naranja" id="barraNaranjaSL"></div>
+        <div class="bar gris" id="barraNoSL"></div>
+      </div>
+      <div id="numSL" style="text-align:center; margin-top:2px;">V:0 N:0 No:0</div>
     </div>
-    <div id="numSL" style="text-align:center; margin-top:2px;">V:0 N:0 No:0</div>
-  </div>
-  <div class="panel">
-    <div class="label">SW</div>
-    <div class="barContainer">
-      <div class="bar verde" id="barraVerdeSW"></div>
-      <div class="bar naranja" id="barraNaranjaSW"></div>
-      <div class="bar gris" id="barraNoSW"></div>
+    <div class="panel">
+      <div class="label">SW</div>
+      <div class="barContainer">
+        <div class="bar verde" id="barraVerdeSW"></div>
+        <div class="bar naranja" id="barraNaranjaSW"></div>
+        <div class="bar gris" id="barraNoSW"></div>
+      </div>
+      <div id="numSW" style="text-align:center; margin-top:2px;">V:0 N:0 No:0</div>
     </div>
-    <div id="numSW" style="text-align:center; margin-top:2px;">V:0 N:0 No:0</div>
-  </div>
-  <div class="panel">
-    <div class="label">Total General</div>
-    <div class="barContainer">
-      <div class="bar verde" id="barraTotalVerde"></div>
-      <div class="bar naranja" id="barraTotalNaranja"></div>
-      <div class="bar gris" id="barraTotalNo"></div>
+    <div class="panel">
+      <div class="label">Total General</div>
+      <div class="barContainer">
+        <div class="bar verde" id="barraTotalVerde"></div>
+        <div class="bar naranja" id="barraTotalNaranja"></div>
+        <div class="bar gris" id="barraTotalNo"></div>
+      </div>
+      <div id="numTotal" style="text-align:center; margin-top:2px;">V:0 N:0 No:0</div>
     </div>
-    <div id="numTotal" style="text-align:center; margin-top:2px;">V:0 N:0 No:0</div>
   </div>
-</div>
 
-<div id="globalButtons">
-  <button class="btn" onclick="seleccionarTodos(true)">Seleccionar TODOS</button>
-  <button class="btn" onclick="seleccionarTodos(false)">Deseleccionar TODOS</button>
-  <button class="btn" onclick="guardarEstado()" id="guardarBtn">💾 Guardar Estados</button>
-  <button class="btn" onclick="descargarExcel()">⬇ Descargar Excel</button>
-</div>
+  <div id="globalButtons">
+    <button class="btn" onclick="seleccionarTodos(true)">Seleccionar TODOS</button>
+    <button class="btn" onclick="seleccionarTodos(false)">Deseleccionar TODOS</button>
+    <button class="btn" onclick="guardarEstado()" id="guardarBtn">💾 Guardar Estados</button>
+    <button class="btn" onclick="descargarExcel()">⬇ Descargar Excel</button>
+  </div>
 
-<div id="contenedor"></div>
+  <div id="contenedor"></div>
 </div>
 
 <script>
+const UID_ADMIN = "tifB8XR9ZLRsyTmyFJcFw6mwadG2"; // tu UID
+
 const firebaseConfig = {
   apiKey: "AIzaSyDnqaBbnieclhdOdbbtaSaVuu7erU5_5_Y",
   authDomain: "layout-944b5.firebaseapp.com",
@@ -100,55 +117,47 @@ const firebaseConfig = {
   measurementId: "G-LY17755TBD"
 };
 firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
 const auth = firebase.auth();
-
-const UID_ADMIN = "tifB8XR9ZLRsyTmyFJcFw6mwadG2";
+const db = firebase.firestore();
 
 const letras = "ABCDEFGHIJKLMNOPQRSTUVW".split("");
 const niveles = [1,2,3,4,5,6];
 const racksSL = 15;
 const racksSW = 19;
 const contenedor = document.getElementById("contenedor");
-let estadoGlobal = {};  
+let estadoGlobal = {};
 const docEstadoApp = "estado_SL_SW";
 
-// --- Login ---
 const loginModal = document.getElementById("loginModal");
-const loginBtn = document.getElementById("loginBtn");
+const googleLoginBtn = document.getElementById("googleLoginBtn");
+const appContent = document.getElementById("appContent");
 
-loginBtn.addEventListener("click", ()=>{
+// --- Login Google ---
+googleLoginBtn.addEventListener("click", () => {
   const provider = new firebase.auth.GoogleAuthProvider();
-  if(/Mobi|Android/i.test(navigator.userAgent)){
-    auth.signInWithRedirect(provider); // móvil
-  } else {
-    auth.signInWithPopup(provider); // desktop
-  }
+  auth.signInWithRedirect(provider);
 });
 
-// Capturar resultado redirect (móvil)
 auth.getRedirectResult().then(result => {
   if(result.user){
-    loginModal.style.display="none";
-    document.getElementById("appContent").style.display="block";
-    if(result.user.uid !== UID_ADMIN){
-      document.getElementById("guardarBtn").disabled = true;
-    }
-    crearRacks();
+    mostrarApp(result.user);
   }
-}).catch(error => console.error("Error login redirect:", error));
+}).catch(err => console.error(err));
 
-// Desktop y móvil: verificar estado auth
-auth.onAuthStateChanged(user=>{
+auth.onAuthStateChanged(user => {
   if(user){
-    loginModal.style.display="none";
-    document.getElementById("appContent").style.display="block";
-    if(user.uid !== UID_ADMIN){
-      document.getElementById("guardarBtn").disabled = true;
-    }
-    crearRacks();
+    mostrarApp(user);
   }
 });
+
+function mostrarApp(user){
+  loginModal.style.display = "none";
+  appContent.style.display = "block";
+  if(user.uid !== UID_ADMIN){
+    document.getElementById("guardarBtn").disabled = true;
+  }
+  crearRacks();
+}
 
 // --- Guardar estados ---
 async function guardarEstado(){
@@ -161,22 +170,20 @@ async function guardarEstado(){
   }
 }
 
-// --- Crear racks ---
+// --- Crear racks y funciones de selección ---
 async function crearRacks(){
   try{
     const docSnap = await db.collection("racks").doc(docEstadoApp).get();
     if(docSnap.exists) estadoGlobal = docSnap.data();
-  } catch(e){
-    console.error("Error al cargar estado:", e);
-  }
+  }catch(e){ console.error(e); }
 
   const todosRacks = [];
   for(let i=1;i<=racksSL;i++) todosRacks.push("RACK SL" + (i<10?"0"+i:i));
   for(let i=1;i<=racksSW;i++) todosRacks.push("RACK SW" + (i<10?"0"+i:i));
 
-  todosRacks.forEach((rackName)=>{
+  todosRacks.forEach(rackName => {
     const rack = document.createElement("div"); rack.className="rack";
-    rack.innerHTML=`<h2>${rackName}</h2>`;
+    rack.innerHTML = `<h2>${rackName}</h2>`;
 
     const btnSel = document.createElement("button"); btnSel.className="btn"; btnSel.innerText="Seleccionar Rack";
     btnSel.onclick = () => seleccionarRack(rackName,true);
@@ -184,7 +191,7 @@ async function crearRacks(){
     btnDes.onclick = () => seleccionarRack(rackName,false);
     rack.appendChild(btnSel); rack.appendChild(btnDes);
 
-    niveles.forEach(nivel=>{
+    niveles.forEach(nivel => {
       const fila = document.createElement("div"); fila.className="fila";
 
       const filaBtnSel = document.createElement("button"); filaBtnSel.className="btn"; filaBtnSel.innerText=`Fila ${nivel} ✔`;
