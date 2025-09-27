@@ -32,12 +32,28 @@ h2 { margin-top: 30px; }
 .gris { background:#999; }
 
 .totalesRack { margin-top:10px; font-weight:bold; }
+
+/* Login modal */
+#loginModal {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; z-index: 9999;
+}
+#loginContent {
+  background: white; padding: 20px; border-radius: 10px; text-align:center;
+}
+#loginContent button { margin-top: 10px; }
 </style>
 </head>
 <body>
 
 <h1>📦 Simulación de Bodega con Racks SL y SW + Firebase</h1>
-<div id="userStatus" style="margin-bottom:10px; font-weight:bold;"></div>
+
+<div id="loginModal">
+  <div id="loginContent">
+    <h2>Iniciar Sesión</h2>
+    <button id="loginBtn">Login con Google</button>
+  </div>
+</div>
 
 <div id="dashboard">
   <div class="panel">
@@ -72,7 +88,7 @@ h2 { margin-top: 30px; }
 <div id="globalButtons">
   <button class="btn" onclick="seleccionarTodos(true)">Seleccionar TODOS</button>
   <button class="btn" onclick="seleccionarTodos(false)">Deseleccionar TODOS</button>
-  <button class="btn" onclick="guardarEstado()">💾 Guardar Estados</button>
+  <button class="btn" id="guardarBtn">💾 Guardar Estados</button>
   <button class="btn" onclick="descargarExcel()">⬇ Descargar Excel</button>
 </div>
 
@@ -92,22 +108,8 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const auth = firebase.auth();
 
-const UID_PERMITIDO = "tifB8XR9ZLRsyTmyFJcFw6mwadG2"; // tu UID
-let usuarioActual = null;
-
-auth.signInWithPopup(new firebase.auth.GoogleAuthProvider())
-  .then(result => {
-    usuarioActual = result.user;
-    if(usuarioActual.uid === UID_PERMITIDO){
-      document.getElementById("userStatus").innerText = `✔ Sesión iniciada como ${usuarioActual.email} (Puedes guardar datos)`;
-    } else {
-      document.getElementById("userStatus").innerText = `❌ Sesión iniciada como ${usuarioActual.email} (Solo lectura)`;
-    }
-  })
-  .catch(error => {
-    console.error("Error al iniciar sesión automáticamente:", error);
-    document.getElementById("userStatus").innerText = "⚠ No se pudo iniciar sesión automáticamente. Solo lectura.";
-  });
+const UID_ADMIN = "tifB8XR9ZLRsyTmyFJcFw6mwadG2"; // Solo este UID puede guardar
+let currentUser = null;
 
 const letras = "ABCDEFGHIJKLMNOPQRSTUVW".split("");
 const niveles = [1,2,3,4,5,6];
@@ -115,16 +117,41 @@ const racksSL = 15;
 const racksSW = 19;
 const contenedor = document.getElementById("contenedor");
 let estadoGlobal = {};  
+
 const docEstadoApp = "estado_SL_SW";
 
-// --- Guardar estados solo si UID coincide ---
-async function guardarEstado(){
-  if(!usuarioActual){
-    alert("Debes iniciar sesión para guardar datos");
-    return;
+// --- Login ---
+const loginModal = document.getElementById("loginModal");
+document.getElementById("loginBtn").addEventListener("click", ()=>{
+  const provider = new firebase.auth.GoogleAuthProvider();
+  if(window.innerWidth <= 768){ // móvil
+    auth.signInWithRedirect(provider);
+  } else {
+    auth.signInWithPopup(provider);
   }
-  if(usuarioActual.uid !== UID_PERMITIDO){
-    alert("No tienes permisos para modificar los datos");
+});
+
+auth.getRedirectResult().then((result)=>{
+  if(result.user) currentUser = result.user;
+}).catch(console.error);
+
+auth.onAuthStateChanged(user=>{
+  if(user){
+    currentUser = user;
+    loginModal.style.display="none";
+    if(user.uid !== UID_ADMIN){
+      document.getElementById("guardarBtn").disabled = true;
+    }
+    crearRacks();
+  } else {
+    loginModal.style.display="flex";
+  }
+});
+
+// --- Guardar estados ---
+async function guardarEstado(){
+  if(!currentUser || currentUser.uid !== UID_ADMIN){
+    alert("Solo el usuario autorizado puede guardar datos");
     return;
   }
   try{
@@ -132,16 +159,18 @@ async function guardarEstado(){
     alert("Estados guardados correctamente");
   }catch(e){
     console.error("Error al guardar estado:", e);
-    alert("Error al guardar estado: " + e);
+    alert("Error al guardar estado: "+e);
   }
 }
 
-// --- Funciones de creación de racks ---
+// --- Crear racks ---
 async function crearRacks(){
   try{
     const docSnap = await db.collection("racks").doc(docEstadoApp).get();
     if(docSnap.exists) estadoGlobal = docSnap.data();
-  } catch(e){ console.error("Error al cargar estado:", e); }
+  } catch(e){
+    console.error("Error al cargar estado:", e);
+  }
 
   const todosRacks = [];
   for(let i=1;i<=racksSL;i++) todosRacks.push("RACK SL" + (i<10?"0"+i:i));
@@ -313,7 +342,6 @@ function descargarExcel(){
   XLSX.writeFile(wb,"Bodega_Racks.xlsx");
 }
 
-crearRacks();
 </script>
 </body>
 </html>
