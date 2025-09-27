@@ -6,6 +6,7 @@
 <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.2.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.2.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.2.0/firebase-auth-compat.js"></script>
 
 <style>
 body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
@@ -36,6 +37,7 @@ h2 { margin-top: 30px; }
 <body>
 
 <h1>📦 Simulación de Bodega con Racks SL y SW + Firebase</h1>
+<div id="userStatus" style="margin-bottom:10px; font-weight:bold;"></div>
 
 <div id="dashboard">
   <div class="panel">
@@ -88,6 +90,24 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+const auth = firebase.auth();
+
+const UID_PERMITIDO = "tifB8XR9ZLRsyTmyFJcFw6mwadG2"; // tu UID
+let usuarioActual = null;
+
+auth.signInWithPopup(new firebase.auth.GoogleAuthProvider())
+  .then(result => {
+    usuarioActual = result.user;
+    if(usuarioActual.uid === UID_PERMITIDO){
+      document.getElementById("userStatus").innerText = `✔ Sesión iniciada como ${usuarioActual.email} (Puedes guardar datos)`;
+    } else {
+      document.getElementById("userStatus").innerText = `❌ Sesión iniciada como ${usuarioActual.email} (Solo lectura)`;
+    }
+  })
+  .catch(error => {
+    console.error("Error al iniciar sesión automáticamente:", error);
+    document.getElementById("userStatus").innerText = "⚠ No se pudo iniciar sesión automáticamente. Solo lectura.";
+  });
 
 const letras = "ABCDEFGHIJKLMNOPQRSTUVW".split("");
 const niveles = [1,2,3,4,5,6];
@@ -95,12 +115,18 @@ const racksSL = 15;
 const racksSW = 19;
 const contenedor = document.getElementById("contenedor");
 let estadoGlobal = {};  
-
-// Documento exclusivo para esta app
 const docEstadoApp = "estado_SL_SW";
 
-// Guardar estados
+// --- Guardar estados solo si UID coincide ---
 async function guardarEstado(){
+  if(!usuarioActual){
+    alert("Debes iniciar sesión para guardar datos");
+    return;
+  }
+  if(usuarioActual.uid !== UID_PERMITIDO){
+    alert("No tienes permisos para modificar los datos");
+    return;
+  }
   try{
     await db.collection("racks").doc(docEstadoApp).set(estadoGlobal);
     alert("Estados guardados correctamente");
@@ -110,14 +136,12 @@ async function guardarEstado(){
   }
 }
 
-// Crear racks
+// --- Funciones de creación de racks ---
 async function crearRacks(){
   try{
     const docSnap = await db.collection("racks").doc(docEstadoApp).get();
     if(docSnap.exists) estadoGlobal = docSnap.data();
-  } catch(e){
-    console.error("Error al cargar estado:", e);
-  }
+  } catch(e){ console.error("Error al cargar estado:", e); }
 
   const todosRacks = [];
   for(let i=1;i<=racksSL;i++) todosRacks.push("RACK SL" + (i<10?"0"+i:i));
@@ -170,7 +194,6 @@ async function crearRacks(){
       rack.appendChild(fila);
     });
 
-    // Totales por rack
     const totalesRack = document.createElement("div"); totalesRack.className="totalesRack"; totalesRack.id=`totales-${rackName}`;
     rack.appendChild(totalesRack);
     contenedor.appendChild(rack);
