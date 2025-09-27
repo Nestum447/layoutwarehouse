@@ -22,7 +22,7 @@ h2 { margin-top: 30px; }
 .btn:hover { background: #1976d2; }
 #globalButtons { margin: 20px 0; text-align: center; }
 
-#dashboard { position: sticky; top: 0; background: #eee; padding: 10px; border-radius: 10px; margin-bottom: 20px; display: flex; justify-content: space-around; align-items: center; gap:20px; }
+#dashboard { position: sticky; top: 0; background: #eee; padding: 10px; border-radius: 10px; margin-bottom: 20px; display: flex; flex-wrap: wrap; justify-content: space-around; align-items: center; gap:20px; }
 .panel { width: 200px; }
 .label { font-weight: bold; margin-bottom: 5px; text-align:center; }
 .barContainer { background: #ccc; border-radius: 10px; height: 20px; width: 100%; overflow: hidden; display: flex; margin-top:5px;}
@@ -32,18 +32,21 @@ h2 { margin-top: 30px; }
 .gris { background:#999; }
 
 .totalesRack { margin-top:10px; font-weight:bold; }
-#loginContainer { text-align:center; margin-top:50px; }
+
+#loginContainer { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; }
+#appContainer { display:none; }
 </style>
 </head>
 <body>
 
-<h1>📦 Simulación de Bodega con Racks SL y SW + Firebase</h1>
-
 <div id="loginContainer">
-  <button class="btn" id="googleLoginBtn">Iniciar sesión con Google</button>
+  <h1>📦 Iniciar sesión con Google</h1>
+  <button class="btn" id="loginBtn">Iniciar Sesión</button>
 </div>
 
-<div id="appContent" style="display:none;">
+<div id="appContainer">
+  <h1>📦 Simulación de Bodega con Racks SL y SW + Firebase</h1>
+
   <div id="dashboard">
     <div class="panel">
       <div class="label">SL</div>
@@ -77,7 +80,7 @@ h2 { margin-top: 30px; }
   <div id="globalButtons">
     <button class="btn" onclick="seleccionarTodos(true)">Seleccionar TODOS</button>
     <button class="btn" onclick="seleccionarTodos(false)">Deseleccionar TODOS</button>
-    <button class="btn" id="guardarBtn">💾 Guardar Estados</button>
+    <button class="btn" onclick="guardarEstado()">💾 Guardar Estados</button>
     <button class="btn" onclick="descargarExcel()">⬇ Descargar Excel</button>
   </div>
 
@@ -98,243 +101,236 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-const miUID = "tifB8XR9ZLRsyTmyFJcFw6mwadG2"; // solo este usuario puede guardar
+const myUID = "tifB8XR9ZLRsyTmyFJcFw6mwadG2"; // Solo este usuario puede guardar
 
 const letras = "ABCDEFGHIJKLMNOPQRSTUVW".split("");
 const niveles = [1,2,3,4,5,6];
 const racksSL = 15;
 const racksSW = 19;
 const contenedor = document.getElementById("contenedor");
-let estadoGlobal = {};  
+let estadoGlobal = {};
 const docEstadoApp = "estado_SL_SW";
 
-// --- LOGIN CON POPUP ---
-const loginBtn = document.getElementById("googleLoginBtn");
+// --- LOGIN ---
+const loginBtn = document.getElementById("loginBtn");
 loginBtn.addEventListener("click", () => {
-  const provider = new firebase.auth.GoogleAuthProvider();
-  auth.signInWithPopup(provider)
-      .then(result => {
-        const user = result.user;
-        mostrarApp(user);
-      })
-      .catch(error => {
-        console.error(error);
-        alert("Error al iniciar sesión: " + error.message);
-      });
+    const provider = new firebase.auth.GoogleAuthProvider();
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    if(isMobile){
+        auth.signInWithRedirect(provider);
+    } else {
+        auth.signInWithPopup(provider).catch(console.error);
+    }
 });
 
-// --- Mostrar app ---
+// Manejar redirect
+auth.getRedirectResult().then(result => {
+    if(result.user) mostrarApp(result.user);
+}).catch(console.error);
+
+// Detectar usuario ya logueado
+auth.onAuthStateChanged(user => {
+    if(user) mostrarApp(user);
+});
+
 function mostrarApp(user){
-  document.getElementById("loginContainer").style.display = "none";
-  document.getElementById("appContent").style.display = "block";
-
-  // Si el usuario no es el dueño, deshabilitar guardar
-  if(user.uid !== miUID){
-    document.getElementById("guardarBtn").disabled = true;
-    document.getElementById("guardarBtn").innerText = "Solo lectura";
-  }
-
-  crearRacks();
-}
-
-// --- Guardar estados ---
-async function guardarEstado(){
-  try{
-    const user = auth.currentUser;
-    if(user.uid !== miUID){
-      alert("No tienes permiso para guardar datos");
-      return;
+    document.getElementById("loginContainer").style.display = "none";
+    document.getElementById("appContainer").style.display = "block";
+    if(user.uid !== myUID){
+        document.getElementById("globalButtons").querySelectorAll("button").forEach(btn=>{
+            if(btn.innerText.includes("Guardar")) btn.disabled = true;
+        });
     }
-    await db.collection("racks").doc(docEstadoApp).set(estadoGlobal);
-    alert("Estados guardados correctamente");
-  }catch(e){
-    console.error("Error al guardar estado:", e);
-    alert("Error al guardar estado: " + e);
-  }
+    crearRacks();
 }
 
-// --- Crear racks ---
+// --- FUNCIONES DE RACKS ---
+async function guardarEstado(){
+    const user = auth.currentUser;
+    if(!user || user.uid !== myUID){ alert("No tienes permisos para guardar."); return; }
+    try{
+        await db.collection("racks").doc(docEstadoApp).set(estadoGlobal);
+        alert("Estados guardados correctamente");
+    }catch(e){
+        console.error("Error al guardar estado:", e);
+        alert("Error al guardar estado: " + e);
+    }
+}
+
 async function crearRacks(){
-  try{
-    const docSnap = await db.collection("racks").doc(docEstadoApp).get();
-    if(docSnap.exists) estadoGlobal = docSnap.data();
-  } catch(e){
-    console.error("Error al cargar estado:", e);
-  }
+    try{
+        const docSnap = await db.collection("racks").doc(docEstadoApp).get();
+        if(docSnap.exists) estadoGlobal = docSnap.data();
+    } catch(e){ console.error("Error al cargar estado:", e); }
 
-  const todosRacks = [];
-  for(let i=1;i<=racksSL;i++) todosRacks.push("RACK SL" + (i<10?"0"+i:i));
-  for(let i=1;i<=racksSW;i++) todosRacks.push("RACK SW" + (i<10?"0"+i:i));
+    const todosRacks = [];
+    for(let i=1;i<=racksSL;i++) todosRacks.push("RACK SL" + (i<10?"0"+i:i));
+    for(let i=1;i<=racksSW;i++) todosRacks.push("RACK SW" + (i<10?"0"+i:i));
 
-  todosRacks.forEach((rackName)=>{
-    const rack = document.createElement("div"); rack.className="rack";
-    rack.innerHTML=`<h2>${rackName}</h2>`;
+    todosRacks.forEach((rackName)=>{
+        const rack = document.createElement("div"); rack.className="rack";
+        rack.innerHTML=`<h2>${rackName}</h2>`;
 
-    const btnSel = document.createElement("button"); btnSel.className="btn"; btnSel.innerText="Seleccionar Rack";
-    btnSel.onclick = () => seleccionarRack(rackName,true);
-    const btnDes = document.createElement("button"); btnDes.className="btn"; btnDes.innerText="Deseleccionar Rack";
-    btnDes.onclick = () => seleccionarRack(rackName,false);
-    rack.appendChild(btnSel); rack.appendChild(btnDes);
+        const btnSel = document.createElement("button"); btnSel.className="btn"; btnSel.innerText="Seleccionar Rack";
+        btnSel.onclick = () => seleccionarRack(rackName,true);
+        const btnDes = document.createElement("button"); btnDes.className="btn"; btnDes.innerText="Deseleccionar Rack";
+        btnDes.onclick = () => seleccionarRack(rackName,false);
+        rack.appendChild(btnSel); rack.appendChild(btnDes);
 
-    niveles.forEach(nivel=>{
-      const fila = document.createElement("div"); fila.className="fila";
+        niveles.forEach(nivel=>{
+            const fila = document.createElement("div"); fila.className="fila";
 
-      const filaBtnSel = document.createElement("button"); filaBtnSel.className="btn"; filaBtnSel.innerText=`Fila ${nivel} ✔`;
-      filaBtnSel.onclick = () => seleccionarFila(rackName,nivel,true);
-      const filaBtnDes = document.createElement("button"); filaBtnDes.className="btn"; filaBtnDes.innerText=`Fila ${nivel} ✘`;
-      filaBtnDes.onclick = () => seleccionarFila(rackName,nivel,false);
-      const filaBtnPiso = document.createElement("button"); filaBtnPiso.className="btn"; filaBtnPiso.innerText=`Ubicación Piso ${nivel}`;
-      filaBtnPiso.onclick = () => togglePiso(rackName,nivel);
+            const filaBtnSel = document.createElement("button"); filaBtnSel.className="btn"; filaBtnSel.innerText=`Fila ${nivel} ✔`;
+            filaBtnSel.onclick = () => seleccionarFila(rackName,nivel,true);
+            const filaBtnDes = document.createElement("button"); filaBtnDes.className="btn"; filaBtnDes.innerText=`Fila ${nivel} ✘`;
+            filaBtnDes.onclick = () => seleccionarFila(rackName,nivel,false);
+            const filaBtnPiso = document.createElement("button"); filaBtnPiso.className="btn"; filaBtnPiso.innerText=`Ubicación Piso ${nivel}`;
+            filaBtnPiso.onclick = () => togglePiso(rackName,nivel);
 
-      fila.appendChild(filaBtnSel); fila.appendChild(filaBtnDes); fila.appendChild(filaBtnPiso);
+            fila.appendChild(filaBtnSel); fila.appendChild(filaBtnDes); fila.appendChild(filaBtnPiso);
 
-      letras.forEach(letra=>{
-        const ubicacion = document.createElement("div"); ubicacion.className="ubicacion";
-        for(let i=1;i<=3;i++){
-          const sub = document.createElement("div"); sub.className="sub"; 
-          sub.innerText=`${letra}${nivel}`;
-          const idSub = `${rackName}_n${nivel}_l${letra}_i${i}`;
-          sub.dataset.rack=rackName; sub.dataset.nivel=nivel; sub.dataset.id=idSub; sub.dataset.estado="ninguno";
-          if(estadoGlobal[idSub]==="verde") { sub.classList.add("seleccionada"); sub.dataset.estado="verde"; }
-          if(estadoGlobal[idSub]==="piso") { sub.classList.add("piso"); sub.dataset.estado="piso"; }
+            letras.forEach(letra=>{
+                const ubicacion = document.createElement("div"); ubicacion.className="ubicacion";
+                for(let i=1;i<=3;i++){
+                    const sub = document.createElement("div"); sub.className="sub"; 
+                    sub.innerText=`${letra}${nivel}`;
+                    const idSub = `${rackName}_n${nivel}_l${letra}_i${i}`;
+                    sub.dataset.rack=rackName; sub.dataset.nivel=nivel; sub.dataset.id=idSub; sub.dataset.estado="ninguno";
+                    if(estadoGlobal[idSub]==="verde") { sub.classList.add("seleccionada"); sub.dataset.estado="verde"; }
+                    if(estadoGlobal[idSub]==="piso") { sub.classList.add("piso"); sub.dataset.estado="piso"; }
 
-          sub.addEventListener("click", ()=>{
-            if(sub.classList.contains("seleccionada")){
-              sub.classList.remove("seleccionada"); sub.dataset.estado="ninguno"; estadoGlobal[idSub]="ninguno";
-            }else{
-              sub.classList.add("seleccionada"); sub.classList.remove("piso"); sub.dataset.estado="verde"; estadoGlobal[idSub]="verde";
-            }
-            actualizarDashboard(); actualizarTotalesRack(rackName);
-          });
-          ubicacion.appendChild(sub);
-        }
-        fila.appendChild(ubicacion);
-      });
-      rack.appendChild(fila);
+                    sub.addEventListener("click", ()=>{
+                        if(sub.classList.contains("seleccionada")){
+                            sub.classList.remove("seleccionada"); sub.dataset.estado="ninguno"; estadoGlobal[idSub]="ninguno";
+                        }else{
+                            sub.classList.add("seleccionada"); sub.classList.remove("piso"); sub.dataset.estado="verde"; estadoGlobal[idSub]="verde";
+                        }
+                        actualizarDashboard(); actualizarTotalesRack(rackName);
+                    });
+                    ubicacion.appendChild(sub);
+                }
+                fila.appendChild(ubicacion);
+            });
+            rack.appendChild(fila);
+        });
+
+        const totalesRack = document.createElement("div"); totalesRack.className="totalesRack"; totalesRack.id=`totales-${rackName}`;
+        rack.appendChild(totalesRack);
+        contenedor.appendChild(rack);
+        actualizarTotalesRack(rackName);
     });
-
-    // Totales por rack
-    const totalesRack = document.createElement("div"); totalesRack.className="totalesRack"; totalesRack.id=`totales-${rackName}`;
-    rack.appendChild(totalesRack);
-    contenedor.appendChild(rack);
-    actualizarTotalesRack(rackName);
-  });
-  actualizarDashboard();
+    actualizarDashboard();
 }
 
-// --- Funciones de selección ---
+// --- FUNCIONES DE SELECCIÓN ---
 function seleccionarRack(rackName, seleccionar){
-  document.querySelectorAll(`.sub[data-rack="${rackName}"]`).forEach(s=>{
-    if(seleccionar){ s.classList.add("seleccionada"); s.classList.remove("piso"); s.dataset.estado="verde"; estadoGlobal[s.dataset.id]="verde"; }
-    else{ s.classList.remove("seleccionada","piso"); s.dataset.estado="ninguno"; estadoGlobal[s.dataset.id]="ninguno"; }
-  });
-  actualizarDashboard(); actualizarTotalesRack(rackName);
+    document.querySelectorAll(`.sub[data-rack="${rackName}"]`).forEach(s=>{
+        if(seleccionar){ s.classList.add("seleccionada"); s.classList.remove("piso"); s.dataset.estado="verde"; estadoGlobal[s.dataset.id]="verde"; }
+        else{ s.classList.remove("seleccionada","piso"); s.dataset.estado="ninguno"; estadoGlobal[s.dataset.id]="ninguno"; }
+    });
+    actualizarDashboard(); actualizarTotalesRack(rackName);
 }
 
 function seleccionarFila(rackName,nivel,seleccionar){
-  document.querySelectorAll(`.sub[data-rack="${rackName}"][data-nivel="${nivel}"]`).forEach(s=>{
-    if(seleccionar){ s.classList.add("seleccionada"); s.classList.remove("piso"); s.dataset.estado="verde"; estadoGlobal[s.dataset.id]="verde"; }
-    else{ s.classList.remove("seleccionada","piso"); s.dataset.estado="ninguno"; estadoGlobal[s.dataset.id]="ninguno"; }
-  });
-  actualizarDashboard(); actualizarTotalesRack(rackName);
+    document.querySelectorAll(`.sub[data-rack="${rackName}"][data-nivel="${nivel}"]`).forEach(s=>{
+        if(seleccionar){ s.classList.add("seleccionada"); s.classList.remove("piso"); s.dataset.estado="verde"; estadoGlobal[s.dataset.id]="verde"; }
+        else{ s.classList.remove("seleccionada","piso"); s.dataset.estado="ninguno"; estadoGlobal[s.dataset.id]="ninguno"; }
+    });
+    actualizarDashboard(); actualizarTotalesRack(rackName);
 }
 
 function togglePiso(rackName,nivel){
-  document.querySelectorAll(`.sub[data-rack="${rackName}"][data-nivel="${nivel}"]`).forEach(s=>{
-    if(s.classList.contains("piso")){ s.classList.remove("piso"); s.dataset.estado="ninguno"; estadoGlobal[s.dataset.id]="ninguno"; }
-    else{ s.classList.add("piso"); s.classList.remove("seleccionada"); s.dataset.estado="piso"; estadoGlobal[s.dataset.id]="piso"; }
-  });
-  actualizarDashboard(); actualizarTotalesRack(rackName);
+    document.querySelectorAll(`.sub[data-rack="${rackName}"][data-nivel="${nivel}"]`).forEach(s=>{
+        if(s.classList.contains("piso")){ s.classList.remove("piso"); s.dataset.estado="ninguno"; estadoGlobal[s.dataset.id]="ninguno"; }
+        else{ s.classList.add("piso"); s.classList.remove("seleccionada"); s.dataset.estado="piso"; estadoGlobal[s.dataset.id]="piso"; }
+    });
+    actualizarDashboard(); actualizarTotalesRack(rackName);
 }
 
 function seleccionarTodos(seleccionar){
-  document.querySelectorAll(".sub").forEach(s=>{
-    if(seleccionar){ s.classList.add("seleccionada"); s.classList.remove("piso"); s.dataset.estado="verde"; estadoGlobal[s.dataset.id]="verde"; }
-    else{ s.classList.remove("seleccionada","piso"); s.dataset.estado="ninguno"; estadoGlobal[s.dataset.id]="ninguno"; }
-  });
-  document.querySelectorAll(".rack").forEach(rack => actualizarTotalesRack(rack.querySelector("h2").innerText));
-  actualizarDashboard();
-}
-
-// --- Totales por rack ---
-function actualizarTotalesRack(rackName){
-  let verde=0, naranja=0, noSel=0;
-  document.querySelectorAll(`.sub[data-rack="${rackName}"]`).forEach(s=>{
-    if(s.dataset.estado==="verde") verde++;
-    else if(s.dataset.estado==="piso") naranja++;
-    else noSel++;
-  });
-  document.getElementById(`totales-${rackName}`).innerText = `Verde: ${verde} | Naranja: ${naranja} | No seleccionado: ${noSel}`;
-}
-
-// --- Dashboard ---
-function actualizarDashboard(){
-  let verdeSL=0, naranjaSL=0, noSL=0;
-  let verdeSW=0, naranjaSW=0, noSW=0;
-
-  document.querySelectorAll(".sub").forEach(s=>{
-    if(s.dataset.rack.startsWith("RACK SL")){
-      if(s.dataset.estado==="verde") verdeSL++;
-      else if(s.dataset.estado==="piso") naranjaSL++;
-      else noSL++;
-    } else if(s.dataset.rack.startsWith("RACK SW")){
-      if(s.dataset.estado==="verde") verdeSW++;
-      else if(s.dataset.estado==="piso") naranjaSW++;
-      else noSW++;
-    }
-  });
-
-  const totalSL = verdeSL+naranjaSL+noSL;
-  const totalSW = verdeSW+naranjaSW+noSW;
-  const total = totalSL+totalSW;
-
-  document.getElementById("barraVerdeSL").style.width = (verdeSL/totalSL*100)+"%";
-  document.getElementById("barraNaranjaSL").style.width = (naranjaSL/totalSL*100)+"%";
-  document.getElementById("barraNoSL").style.width = (noSL/totalSL*100)+"%";
-  document.getElementById("numSL").innerText = `V:${verdeSL} N:${naranjaSL} No:${noSL}`;
-
-  document.getElementById("barraVerdeSW").style.width = (verdeSW/totalSW*100)+"%";
-  document.getElementById("barraNaranjaSW").style.width = (naranjaSW/totalSW*100)+"%";
-  document.getElementById("barraNoSW").style.width = (noSW/totalSW*100)+"%";
-  document.getElementById("numSW").innerText = `V:${verdeSW} N:${naranjaSW} No:${noSW}`;
-
-  document.getElementById("barraTotalVerde").style.width = ((verdeSL+verdeSW)/total*100)+"%";
-  document.getElementById("barraTotalNaranja").style.width = ((naranjaSL+naranjaSW)/total*100)+"%";
-  document.getElementById("barraTotalNo").style.width = ((noSL+noSW)/total*100)+"%";
-  document.getElementById("numTotal").innerText = `V:${verdeSL+verdeSW} N:${naranjaSL+naranjaSW} No:${noSL+noSW}`;
-}
-
-// --- Descargar Excel ---
-function descargarExcel(){
-  const wb = XLSX.utils.book_new();
-  const ws_data = [];
-  document.querySelectorAll(".rack").forEach(rack=>{
-    const rackName = rack.querySelector("h2").innerText;
-    ws_data.push([rackName]);
-    niveles.forEach(nivel=>{
-      const row=[];
-      letras.forEach(letra=>{
-        for(let i=1;i<=3;i++){
-          const idSub = `${rackName}_n${nivel}_l${letra}_i${i}`;
-          const val = estadoGlobal[idSub];
-          if(val==="verde") row.push("V");
-          else if(val==="piso") row.push("P");
-          else row.push("");
-        }
-      });
-      ws_data.push(row);
+    document.querySelectorAll(".sub").forEach(s=>{
+        if(seleccionar){ s.classList.add("seleccionada"); s.classList.remove("piso"); s.dataset.estado="verde"; estadoGlobal[s.dataset.id]="verde"; }
+        else{ s.classList.remove("seleccionada","piso"); s.dataset.estado="ninguno"; estadoGlobal[s.dataset.id]="ninguno"; }
     });
-    const totales = document.getElementById(`totales-${rackName}`).innerText;
-    ws_data.push([totales]);
-    ws_data.push([]);
-  });
-  const ws = XLSX.utils.aoa_to_sheet(ws_data);
-  XLSX.utils.book_append_sheet(wb, ws, "Bodega Completa");
-  XLSX.writeFile(wb,"Bodega_Racks.xlsx");
+    document.querySelectorAll(".rack").forEach(rack => actualizarTotalesRack(rack.querySelector("h2").innerText));
+    actualizarDashboard();
 }
 
-// Conectar botón guardar
-document.getElementById("guardarBtn").addEventListener("click", guardarEstado);
+// --- TOTALES ---
+function actualizarTotalesRack(rackName){
+    let verde=0, naranja=0, noSel=0;
+    document.querySelectorAll(`.sub[data-rack="${rackName}"]`).forEach(s=>{
+        if(s.dataset.estado==="verde") verde++;
+        else if(s.dataset.estado==="piso") naranja++;
+        else noSel++;
+    });
+    document.getElementById(`totales-${rackName}`).innerText = `Verde: ${verde} | Naranja: ${naranja} | No seleccionado: ${noSel}`;
+}
+
+function actualizarDashboard(){
+    let verdeSL=0, naranjaSL=0, noSL=0;
+    let verdeSW=0, naranjaSW=0, noSW=0;
+
+    document.querySelectorAll(".sub").forEach(s=>{
+        if(s.dataset.rack.startsWith("RACK SL")){
+            if(s.dataset.estado==="verde") verdeSL++;
+            else if(s.dataset.estado==="piso") naranjaSL++;
+            else noSL++;
+        } else if(s.dataset.rack.startsWith("RACK SW")){
+            if(s.dataset.estado==="verde") verdeSW++;
+            else if(s.dataset.estado==="piso") naranjaSW++;
+            else noSW++;
+        }
+    });
+
+    const totalSL = verdeSL+naranjaSL+noSL;
+    const totalSW = verdeSW+naranjaSW+noSW;
+    const total = totalSL+totalSW;
+
+    document.getElementById("barraVerdeSL").style.width = (verdeSL/totalSL*100)+"%";
+    document.getElementById("barraNaranjaSL").style.width = (naranjaSL/totalSL*100)+"%";
+    document.getElementById("barraNoSL").style.width = (noSL/totalSL*100)+"%";
+    document.getElementById("numSL").innerText = `V:${verdeSL} N:${naranjaSL} No:${noSL}`;
+
+    document.getElementById("barraVerdeSW").style.width = (verdeSW/totalSW*100)+"%";
+    document.getElementById("barraNaranjaSW").style.width = (naranjaSW/totalSW*100)+"%";
+    document.getElementById("barraNoSW").style.width = (noSW/totalSW*100)+"%";
+    document.getElementById("numSW").innerText = `V:${verdeSW} N:${naranjaSW} No:${noSW}`;
+
+    document.getElementById("barraTotalVerde").style.width = ((verdeSL+verdeSW)/total*100)+"%";
+    document.getElementById("barraTotalNaranja").style.width = ((naranjaSL+naranjaSW)/total*100)+"%";
+    document.getElementById("barraTotalNo").style.width = ((noSL+noSW)/total*100)+"%";
+    document.getElementById("numTotal").innerText = `V:${verdeSL+verdeSW} N:${naranjaSL+naranjaSW} No:${noSL+noSW}`;
+}
+
+// --- DESCARGAR EXCEL ---
+function descargarExcel(){
+    const wb = XLSX.utils.book_new();
+    const ws_data = [];
+    document.querySelectorAll(".rack").forEach(rack=>{
+        const rackName = rack.querySelector("h2").innerText;
+        ws_data.push([rackName]);
+        niveles.forEach(nivel=>{
+            const row=[];
+            letras.forEach(letra=>{
+                for(let i=1;i<=3;i++){
+                    const idSub = `${rackName}_n${nivel}_l${letra}_i${i}`;
+                    const val = estadoGlobal[idSub];
+                    if(val==="verde") row.push("V");
+                    else if(val==="piso") row.push("P");
+                    else row.push("");
+                }
+            });
+            ws_data.push(row);
+        });
+        const totales = document.getElementById(`totales-${rackName}`).innerText;
+        ws_data.push([totales]);
+        ws_data.push([]);
+    });
+    const ws = XLSX.utils.aoa_to_sheet(ws_data);
+    XLSX.utils.book_append_sheet(wb, ws, "Bodega Completa");
+    XLSX.writeFile(wb,"Bodega_Racks.xlsx");
+}
 </script>
 </body>
 </html>
