@@ -9,7 +9,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.2.0/firebase-firestore-compat.js"></script>
 
 <style>
-body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f5f5f5; }
+body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
 h2 { margin-top: 30px; }
 .rack { margin-bottom: 30px; padding: 10px; background: #fff; border: 2px solid #ccc; border-radius: 10px; }
 .fila { display: flex; flex-wrap: nowrap; margin-bottom: 5px; align-items: center; }
@@ -32,38 +32,18 @@ h2 { margin-top: 30px; }
 .gris { background:#999; }
 
 .totalesRack { margin-top:10px; font-weight:bold; }
-
-/* --- Login Modal --- */
-#loginModal {
-  position: fixed;
-  top:0; left:0;
-  width:100%; height:100%;
-  background: rgba(0,0,0,0.5);
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  z-index:9999;
-}
-#loginModal button {
-  padding: 20px 30px;
-  font-size: 18px;
-  cursor:pointer;
-  max-width: 90%;
-}
-
-/* --- App Content oculto hasta login --- */
-#appContent { display:none; padding: 20px; }
+#loginContainer { text-align:center; margin-top:50px; }
 </style>
 </head>
 <body>
 
-<div id="loginModal">
-  <button id="googleLoginBtn">Iniciar sesión con Google</button>
+<h1>📦 Simulación de Bodega con Racks SL y SW + Firebase</h1>
+
+<div id="loginContainer">
+  <button class="btn" id="googleLoginBtn">Iniciar sesión con Google</button>
 </div>
 
-<div id="appContent">
-  <h1>📦 Simulación de Bodega con Racks SL y SW + Firebase</h1>
-
+<div id="appContent" style="display:none;">
   <div id="dashboard">
     <div class="panel">
       <div class="label">SL</div>
@@ -97,7 +77,7 @@ h2 { margin-top: 30px; }
   <div id="globalButtons">
     <button class="btn" onclick="seleccionarTodos(true)">Seleccionar TODOS</button>
     <button class="btn" onclick="seleccionarTodos(false)">Deseleccionar TODOS</button>
-    <button class="btn" onclick="guardarEstado()" id="guardarBtn">💾 Guardar Estados</button>
+    <button class="btn" id="guardarBtn">💾 Guardar Estados</button>
     <button class="btn" onclick="descargarExcel()">⬇ Descargar Excel</button>
   </div>
 
@@ -105,8 +85,6 @@ h2 { margin-top: 30px; }
 </div>
 
 <script>
-const UID_ADMIN = "tifB8XR9ZLRsyTmyFJcFw6mwadG2"; // tu UID
-
 const firebaseConfig = {
   apiKey: "AIzaSyDnqaBbnieclhdOdbbtaSaVuu7erU5_5_Y",
   authDomain: "layout-944b5.firebaseapp.com",
@@ -120,48 +98,53 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
+const miUID = "tifB8XR9ZLRsyTmyFJcFw6mwadG2"; // solo este usuario puede guardar
+
 const letras = "ABCDEFGHIJKLMNOPQRSTUVW".split("");
 const niveles = [1,2,3,4,5,6];
 const racksSL = 15;
 const racksSW = 19;
 const contenedor = document.getElementById("contenedor");
-let estadoGlobal = {};
+let estadoGlobal = {};  
 const docEstadoApp = "estado_SL_SW";
 
-const loginModal = document.getElementById("loginModal");
-const googleLoginBtn = document.getElementById("googleLoginBtn");
-const appContent = document.getElementById("appContent");
-
-// --- Login Google ---
-googleLoginBtn.addEventListener("click", () => {
+// --- LOGIN CON POPUP ---
+const loginBtn = document.getElementById("googleLoginBtn");
+loginBtn.addEventListener("click", () => {
   const provider = new firebase.auth.GoogleAuthProvider();
-  auth.signInWithRedirect(provider);
+  auth.signInWithPopup(provider)
+      .then(result => {
+        const user = result.user;
+        mostrarApp(user);
+      })
+      .catch(error => {
+        console.error(error);
+        alert("Error al iniciar sesión: " + error.message);
+      });
 });
 
-auth.getRedirectResult().then(result => {
-  if(result.user){
-    mostrarApp(result.user);
-  }
-}).catch(err => console.error(err));
-
-auth.onAuthStateChanged(user => {
-  if(user){
-    mostrarApp(user);
-  }
-});
-
+// --- Mostrar app ---
 function mostrarApp(user){
-  loginModal.style.display = "none";
-  appContent.style.display = "block";
-  if(user.uid !== UID_ADMIN){
+  document.getElementById("loginContainer").style.display = "none";
+  document.getElementById("appContent").style.display = "block";
+
+  // Si el usuario no es el dueño, deshabilitar guardar
+  if(user.uid !== miUID){
     document.getElementById("guardarBtn").disabled = true;
+    document.getElementById("guardarBtn").innerText = "Solo lectura";
   }
+
   crearRacks();
 }
 
 // --- Guardar estados ---
 async function guardarEstado(){
   try{
+    const user = auth.currentUser;
+    if(user.uid !== miUID){
+      alert("No tienes permiso para guardar datos");
+      return;
+    }
     await db.collection("racks").doc(docEstadoApp).set(estadoGlobal);
     alert("Estados guardados correctamente");
   }catch(e){
@@ -170,20 +153,22 @@ async function guardarEstado(){
   }
 }
 
-// --- Crear racks y funciones de selección ---
+// --- Crear racks ---
 async function crearRacks(){
   try{
     const docSnap = await db.collection("racks").doc(docEstadoApp).get();
     if(docSnap.exists) estadoGlobal = docSnap.data();
-  }catch(e){ console.error(e); }
+  } catch(e){
+    console.error("Error al cargar estado:", e);
+  }
 
   const todosRacks = [];
   for(let i=1;i<=racksSL;i++) todosRacks.push("RACK SL" + (i<10?"0"+i:i));
   for(let i=1;i<=racksSW;i++) todosRacks.push("RACK SW" + (i<10?"0"+i:i));
 
-  todosRacks.forEach(rackName => {
+  todosRacks.forEach((rackName)=>{
     const rack = document.createElement("div"); rack.className="rack";
-    rack.innerHTML = `<h2>${rackName}</h2>`;
+    rack.innerHTML=`<h2>${rackName}</h2>`;
 
     const btnSel = document.createElement("button"); btnSel.className="btn"; btnSel.innerText="Seleccionar Rack";
     btnSel.onclick = () => seleccionarRack(rackName,true);
@@ -191,7 +176,7 @@ async function crearRacks(){
     btnDes.onclick = () => seleccionarRack(rackName,false);
     rack.appendChild(btnSel); rack.appendChild(btnDes);
 
-    niveles.forEach(nivel => {
+    niveles.forEach(nivel=>{
       const fila = document.createElement("div"); fila.className="fila";
 
       const filaBtnSel = document.createElement("button"); filaBtnSel.className="btn"; filaBtnSel.innerText=`Fila ${nivel} ✔`;
@@ -228,6 +213,7 @@ async function crearRacks(){
       rack.appendChild(fila);
     });
 
+    // Totales por rack
     const totalesRack = document.createElement("div"); totalesRack.className="totalesRack"; totalesRack.id=`totales-${rackName}`;
     rack.appendChild(totalesRack);
     contenedor.appendChild(rack);
@@ -346,6 +332,9 @@ function descargarExcel(){
   XLSX.utils.book_append_sheet(wb, ws, "Bodega Completa");
   XLSX.writeFile(wb,"Bodega_Racks.xlsx");
 }
+
+// Conectar botón guardar
+document.getElementById("guardarBtn").addEventListener("click", guardarEstado);
 </script>
 </body>
 </html>
