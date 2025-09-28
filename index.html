@@ -307,29 +307,34 @@ function actualizarDashboard(){
   document.getElementById("numTotal").innerText = `V:${verdeSL+verdeSW} N:${naranjaSL+naranjaSW} No:${noSL+noSW}`;
 }
 
-// --- Utilidad RGB → HEX ---
-function rgbToHex(rgb) {
-  const result = rgb.match(/\d+/g);
-  return result
-    ? (
-        (1 << 24) +
-        (parseInt(result[0]) << 16) +
-        (parseInt(result[1]) << 8) +
-        parseInt(result[2])
-      )
-        .toString(16)
-        .slice(1)
-        .toUpperCase()
-    : "FFFFFF";
-}
-
-// --- Descargar Excel con colores y nomenclatura ---
+// --- Descargar Excel ---
 function descargarExcel(){
   const wb = XLSX.utils.book_new();
-  const ws = {};
-  let row = 0;
-
+  const ws_data = [];
   document.querySelectorAll(".rack").forEach(rack=>{
     const rackName = rack.querySelector("h2").innerText;
-    XLSX.utils.sheet_add_aoa(ws, [[rackName]], {origin:{r:row,c:0}});
-    ws[XLSX.utils.encode_cell({r:
+    ws_data.push([rackName]);
+    niveles.forEach(nivel=>{
+      const row=[];
+      letras.forEach(letra=>{
+        for(let i=1;i<=3;i++){
+          const idSub = `${rackName}_n${nivel}_l${letra}_i${i}`;
+          const val = estadoGlobal[idSub];
+          if(val==="verde") row.push("V");
+          else if(val==="piso") row.push("P");
+          else row.push("");
+        }
+      });
+      ws_data.push(row);
+    });
+    const totales = document.getElementById(`totales-${rackName}`).innerText;
+    ws_data.push([totales]);
+    ws_data.push([]);
+  });
+  const ws = XLSX.utils.aoa_to_sheet(ws_data);
+  XLSX.utils.book_append_sheet(wb, ws, "Bodega Completa");
+  XLSX.writeFile(wb,"Bodega_Racks.xlsx");
+}
+</script>
+</body>
+        </html>
