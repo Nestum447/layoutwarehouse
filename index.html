@@ -310,31 +310,72 @@ function actualizarDashboard(){
 // --- Descargar Excel ---
 function descargarExcel(){
   const wb = XLSX.utils.book_new();
-  const ws_data = [];
+  const ws = {};
+
+  let rowIndex = 0;
+
+  // Estilo de borde estándar
+  const borderStyle = {
+    top:    { style: "thin", color: { rgb: "000000" } },
+    bottom: { style: "thin", color: { rgb: "000000" } },
+    left:   { style: "thin", color: { rgb: "000000" } },
+    right:  { style: "thin", color: { rgb: "000000" } }
+  };
+
   document.querySelectorAll(".rack").forEach(rack=>{
     const rackName = rack.querySelector("h2").innerText;
-    ws_data.push([rackName]);
+
+    // Nombre del rack
+    XLSX.utils.sheet_add_aoa(ws, [[rackName]], {origin: {r: rowIndex, c: 0}});
+    rowIndex++;
+
     niveles.forEach(nivel=>{
-      const row=[];
+      let colIndex = 0;
       letras.forEach(letra=>{
         for(let i=1;i<=3;i++){
           const idSub = `${rackName}_n${nivel}_l${letra}_i${i}`;
-          const val = estadoGlobal[idSub];
-          if(val==="verde") row.push("V");
-          else if(val==="piso") row.push("P");
-          else row.push("");
+          const estado = estadoGlobal[idSub] || "ninguno";
+
+          // Nomenclatura resumida: A1-1, B2-2, etc.
+          const cellValue = `${letra}${nivel}-${i}`;
+          const cellRef = XLSX.utils.encode_cell({r: rowIndex, c: colIndex});
+          ws[cellRef] = { v: cellValue, t: "s", s:{ border: borderStyle } };
+
+          // Colorear según estado
+          if(estado === "verde"){
+            ws[cellRef].s.fill = { fgColor: { rgb: "4CAF50" } };
+            ws[cellRef].s.font = { color: { rgb:"FFFFFF" }, bold:true };
+          } else if(estado === "piso"){
+            ws[cellRef].s.fill = { fgColor: { rgb: "FFA500" } };
+            ws[cellRef].s.font = { color: { rgb:"FFFFFF" }, bold:true };
+          } else {
+            ws[cellRef].s.fill = { fgColor: { rgb: "DDDDDD" } };
+            ws[cellRef].s.font = { color: { rgb:"000000" } };
+          }
+
+          colIndex++;
         }
       });
-      ws_data.push(row);
+      rowIndex++;
     });
+
+    // Totales con borde también
     const totales = document.getElementById(`totales-${rackName}`).innerText;
-    ws_data.push([totales]);
-    ws_data.push([]);
+    const totalesRef = XLSX.utils.encode_cell({r: rowIndex, c: 0});
+    ws[totalesRef] = { v: totales, t: "s", s:{ border: borderStyle } };
+    rowIndex += 2;
   });
-  const ws = XLSX.utils.aoa_to_sheet(ws_data);
+
+  // Definir rango válido de la hoja
+  ws['!ref'] = XLSX.utils.encode_range({
+    s: {r:0, c:0},
+    e: {r:rowIndex, c:100}
+  });
+
   XLSX.utils.book_append_sheet(wb, ws, "Bodega Completa");
   XLSX.writeFile(wb,"Bodega_Racks.xlsx");
 }
+
 </script>
 </body>
         </html>
