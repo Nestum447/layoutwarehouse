@@ -1,6 +1,8 @@
 # layoutwarehouse
 
 https://nestum447.github.io/layoutwarehouse/
+correo: todos@gmail.com
+clave acceso publica: 123456
 
 # 📦 Simulación de Bodega con Racks SL y SW
 
