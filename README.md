@@ -2,23 +2,71 @@
 
 https://nestum447.github.io/layoutwarehouse/
 
-# Bodega Visual Interactiva - 15 Racks
+# 📦 Simulación de Bodega con Racks SL y SW
 
-Esta es una aplicación web interactiva que simula la **distribución de una bodega** con 15 racks, cada uno con:
-
-- **23 columnas** (A → W)  
-- **6 niveles** (1 → 6)  
-- **3 sub-ubicaciones por ubicación**  
-
-La aplicación permite **seleccionar sub-ubicaciones**, ver el **total de seleccionadas/no seleccionadas**, y **exportar la distribución a JSON**.
+Aplicación web en **HTML + Firebase + JavaScript** para simular el estado de racks en una bodega.  
+Permite visualizar, seleccionar y marcar ubicaciones en racks **SL** y **SW**, generar reportes y guardar estados en Firestore.
 
 ---
 
-## 📂 Archivos del repositorio
+## ✨ Funcionalidades
 
-- `index.html` → Archivo principal de la aplicación (cargará automáticamente en GitHub Pages).  
-- `README.md` → Este archivo con instrucciones.  
-- `assets/` (opcional) → Para CSS o imágenes adicionales si quieres personalizar la visualización.
+- Visualización interactiva de racks **SL** y **SW**.  
+- Selección de:
+  - Racks completos
+  - Filas
+  - Ubicaciones individuales  
+- Estados de ubicación:
+  - ✅ Verde (ocupado / seleccionado)  
+  - 🟧 Naranja (piso)  
+  - ⚪ Gris (no seleccionado)  
+- Dashboard con barras de progreso y totales.  
+- Descarga de reporte en **Excel** (`.xlsx`).  
+- Integración con **Firebase Authentication** y **Firestore**.
+
+---
+
+## 🔒 Permisos de acceso
+
+La aplicación usa **Firebase Authentication** con dos modos de acceso:
+
+1. **Admin (`ncarpio935@gmail.com`)**
+   - Inicia sesión con correo y contraseña.
+   - Puede **leer y escribir** en Firestore (guardar estados).
+2. **Usuarios anónimos**
+   - Se conectan automáticamente en **modo anónimo**.
+   - Solo pueden **leer** información (modo solo lectura).
+   - Pueden navegar y descargar reportes, pero **no guardar cambios**.
+
+---
+
+## ⚙️ Tecnologías utilizadas
+
+- **HTML5 + CSS3** → estructura y estilos.  
+- **JavaScript (Vanilla)** → lógica de la app.  
+- **Firebase**  
+  - Authentication (correo y anónimo).  
+  - Firestore Database (almacenamiento de estados).  
+- **SheetJS (XLSX)** → exportar datos a Excel.
+
+---
+
+## 🚀 Despliegue
+
+La app puede desplegarse en:
+
+- **Firebase Hosting**
+- **GitHub Pages** (recomendado para visualización simple)
+
+⚠️ Si usas GitHub Pages, la app se autentica automáticamente:
+- Si puede usar las credenciales admin → entra con permisos de escritura.
+- Si no → entra como usuario anónimo (solo lectura).
+
+---
+
+## 📂 Estructura del proyecto
+
+
 
 ---
 
